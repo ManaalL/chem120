@@ -1,0 +1,10 @@
+{
+  "name": "chem120",
+  "private": true,
+  "type": "module",
+  "description": "Interactive learning site for CHEM 120/121 Module 2: quantum theory and the hydrogen atom",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "serve": "python3 -m http.server 8080"
+  }
+}
