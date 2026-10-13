@@ -6,11 +6,11 @@ Every figure is computed live in the browser from the equations and constants in
 
 ## What's in it
 
-- **Lessons 2.1 to 2.10**: written explanations with KaTeX math, worked examples, a figure you can change in every lesson, self-check questions and progress tracking.
-- **Orbital lab**: all 14 hydrogen orbitals from 1s to 3d. Boundary surfaces (any enclosed probability from 50 to 99%), Monte Carlo point clouds of up to 100,000 points sampled from |Ψ|², slice planes with a cutaway and nodal lines, radial and angular node surfaces, and linked plots of R, R² and r²R² with the most probable radius marked.
-- **Experiments**: photoelectric effect, blackbody radiation, hydrogen line spectra, Bohr transitions, electron diffraction, the uncertainty principle, position measurements (Born interpretation) and Stern-Gerlach.
+- **Lessons 2.1 to 2.10**, each built in short parts. Every lesson opens with a prediction to commit to and comes back to it at the end. Key phrases light up as you scroll and the main ideas collect into a Notes drawer. Each part is followed by something to do: a guided simulation with auto-checked "Try this" tasks, a step-by-step worked example followed by a similar problem with hints, a draw-your-guess graph, a sorting or matching task, or a quick check with an explanation for every option. Common misconceptions are named and corrected. Dotted words show a definition when tapped.
+- **Review**: recall cards from every lesson on a spaced schedule (Leitner boxes), plus mixed practice problems with worked solutions.
+- **Orbital lab**: all 14 hydrogen orbitals from 1s to 3d as boundary surfaces, point clouds, slice planes and node surfaces, linked to plots of R, R² and r²R², with challenges.
+- **Experiments**: all 16 guided simulations in one place.
 - **Applications**: MRI and NMR, cryo-electron microscopy, photodynamic therapy, pulse oximetry, GFP fluorescence and photosynthesis, each with a small calculator.
-- **Practice problems**: generated questions with fresh numbers and worked solutions for every calculation type in the module.
 - **Reference sheet**: all formulas and constants.
 
 ## Running it
@@ -42,7 +42,9 @@ Tests cover normalization of every radial and angular factor, node counts and po
 | `js/core/physics.js` | Constants and formulas (photon energy, Bohr levels, photoelectric effect, de Broglie, uncertainty) |
 | `js/core/hydrogen.js` | Hydrogen wavefunctions, node finding, radial distribution peaks, isosurface thresholds, |Ψ|² sampling |
 | `js/widgets/orbital-engine.js` | Three.js orbital renderer: marching-cubes surfaces split by phase, point clouds, slice planes, nodes |
-| `js/widgets/*.js` | One file per interactive figure |
+| `js/widgets/*.js` | One file per simulation; each reports its state so tasks can tick off |
+| `js/learn/*.js` | Learning components: predictions, key ideas and notes, worked examples, draw-your-guess, sort and match, flashcards and the spaced review deck |
+| `js/content/*.js` | Simulation guides and tasks, recall cards, glossary, applications |
 | `js/lessons/l2-*.js` | Lesson text and the figures each lesson uses |
 | `js/content/applications.js` | Application write-ups shared by lessons and the Applications page |
 | `js/app.js` | Routing, page layout, progress tracking, and moving each figure's controls into the side panel |
