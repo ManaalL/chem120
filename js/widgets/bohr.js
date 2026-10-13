@@ -1,7 +1,7 @@
 // Lesson 2.4: Bohr atom with animated transitions beside an energy-level diagram.
 import * as THREE from 'three';
 import { createStage, textSprite } from '../ui/stage.js';
-import { h, segmented, readouts, button } from '../ui/dom.js';
+import { h, segmented, readouts, button, bus } from '../ui/dom.js';
 import * as P from '../core/physics.js';
 
 const NMAX = 6;
@@ -13,6 +13,8 @@ export function create({ ni = 3, nf = 2 } = {}) {
   const diagWrap = h('div', { style: { padding: '12px', position: 'relative' } }, diag);
   const el = h('div', { class: 'widget-row' }, vp, diagWrap);
   const state = { ni, nf, n: ni, anim: null, angle: 0 };
+  const ev = bus();
+  const snap = () => ({ ni: state.ni, nf: state.nf, last: state.lastRun || null });
 
   const stage = createStage(vp, { position: [0, -7.4, 6.8], target: [0, 0, 0], zUp: true, minDistance: 3, maxDistance: 14 });
   let electron, photon, photonMat, rings = [];
@@ -80,7 +82,8 @@ export function create({ ni = 3, nf = 2 } = {}) {
     }
   }
 
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const t = P.transition(state.ni, state.nf);
     ro.set('Ei', `${P.sci(P.levelEnergy(state.ni), 4)} J`);
     ro.set('Ef', `${P.sci(P.levelEnergy(state.nf), 4)} J`);
@@ -136,7 +139,7 @@ export function create({ ni = 3, nf = 2 } = {}) {
           photon.visible = false;
           const f = Math.min(1, (a.t - 0.9) / 0.5);
           radius = rVis(a.from) + (rVis(a.to) - rVis(a.from)) * (f * f * (3 - 2 * f));
-          if (f >= 1) { state.n = a.to; state.anim = null; }
+          if (f >= 1) { state.n = a.to; state.lastRun = { from: a.from, to: a.to, type: a.type, at: Date.now() }; state.anim = null; ev.emit(snap()); }
         }
       } else {
         // electron drops, then a photon leaves
@@ -146,7 +149,7 @@ export function create({ ni = 3, nf = 2 } = {}) {
           const k = (a.t - 0.5) / 1.0;
           const pos = dirOut.clone().multiplyScalar(rVis(a.to));
           photon.visible = true; photonPath(pos.clone().addScaledVector(dirOut, 3.4 * k), dirOut, 0.7, a.t * 30);
-          if (k >= 1) { photon.visible = false; state.n = a.to; state.anim = null; }
+          if (k >= 1) { photon.visible = false; state.n = a.to; state.lastRun = { from: a.from, to: a.to, type: a.type, at: Date.now() }; state.anim = null; ev.emit(snap()); }
         }
       }
     }
@@ -164,5 +167,5 @@ export function create({ ni = 3, nf = 2 } = {}) {
 
   const resizeObs = new ResizeObserver(drawDiagram); resizeObs.observe(diagWrap);
   update();
-  return { el, controls, title: 'Bohr transitions', sub: 'Choose two levels, then run the jump', dispose() { stage?.dispose(); resizeObs.disconnect(); } };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Bohr transitions', sub: 'Choose two levels, then run the jump', dispose() { stage?.dispose(); resizeObs.disconnect(); } };
 }

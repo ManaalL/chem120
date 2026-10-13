@@ -1,5 +1,5 @@
 // Lesson 2.3 (iii): continuous, absorption and emission spectra of hydrogen.
-import { h, segmented, toggle, readouts } from '../ui/dom.js';
+import { h, segmented, toggle, readouts, bus } from '../ui/dom.js';
 import * as P from '../core/physics.js';
 
 // Measured wavelengths of hydrogen's visible lines (Bohr's formula with the course constants
@@ -11,6 +11,8 @@ export function create({ mode = 'emission' } = {}) {
   const diagram = h('canvas', { class: 'canvas-stage', 'aria-label': 'Experiment diagram' });
   const el = h('div', { class: 'spectro' }, diagram, h('div', { style: { height: '14px' } }), strip);
   const state = { mode, labels: true };
+  const ev = bus();
+  const snap = () => ({ mode: state.mode, labels: state.labels });
   const lo = 380, hi = 750;
 
   function drawDiagram() {
@@ -84,7 +86,8 @@ export function create({ mode = 'emission' } = {}) {
   }
 
   const ro = readouts(BALMER.slice().reverse().map((b) => ({ key: b.n, label: `${b.nm.toFixed(1)} nm` })));
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     drawDiagram(); drawStrip();
     for (const b of BALMER) {
       const E = Math.abs(P.transition(b.n, 2).dE);
@@ -99,5 +102,5 @@ export function create({ mode = 'emission' } = {}) {
     h('p', { class: 'ctl-section' }, 'Visible hydrogen lines and photon energies'), ro,
     h('p', { class: 'ctl-hint' }, 'The dark lines in the absorption spectrum sit at exactly the same wavelengths as the bright lines in the emission spectrum. The transition labels come from Bohr\'s model in lesson 2.4.'));
   update();
-  return { el, controls, title: 'Hydrogen line spectra', sub: 'Only certain wavelengths are absorbed or emitted', dispose: () => resizeObs.disconnect() };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Hydrogen line spectra', sub: 'Only certain wavelengths are absorbed or emitted', dispose: () => resizeObs.disconnect() };
 }

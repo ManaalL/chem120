@@ -36,9 +36,9 @@ const FORMULAS = [
 ];
 
 export function render(ctx) {
-  const main = h('article', { class: 'prose', style: { maxWidth: '60rem' } });
+  const main = h('article', { class: 'page' });
   ctx.main.append(main);
-  main.append(h('header', { class: 'lesson-head' },
+  main.append(h('header', { class: 'page-head' },
     h('p', { class: 'kicker' }, 'Tools'),
     h('h1', {}, 'Formulas and constants'),
     h('p', { class: 'goal' }, 'Everything Module 2 uses, with the lesson where each one is introduced. Constants use the values from the module notes.')));

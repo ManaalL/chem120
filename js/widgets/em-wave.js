@@ -1,7 +1,7 @@
 // Lesson 2.2: electromagnetic wave with E and B fields, a log-scale spectrum bar and live conversions.
 import * as THREE from 'three';
 import { createStage, textSprite } from '../ui/stage.js';
-import { h, slider, readouts, button } from '../ui/dom.js';
+import { h, slider, readouts, button, bus } from '../ui/dom.js';
 import * as P from '../core/physics.js';
 
 const REGION_BLOCKS = [
@@ -31,6 +31,8 @@ export function create({ initial = 550e-9 } = {}) {
   el.append(vp, barWrap);
 
   const state = { log: Math.log10(initial), t: 0 };
+  const ev = bus();
+  const snap = () => ({ lambda: 10 ** state.log });
   const stage = createStage(vp, { position: [3.2, 2.4, 6.2], target: [0, 0, 0], minDistance: 4, maxDistance: 14 });
   const N = 240, L = 6.4, CYCLES = 2.5;
   let eLine, bLine, eStems, bStems, eMat;
@@ -111,7 +113,8 @@ export function create({ initial = 550e-9 } = {}) {
   bar.addEventListener('pointerup', () => { dragging = false; });
   new ResizeObserver(drawBar).observe(barWrap);
 
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const lambda = Math.pow(10, state.log);
     const nu = P.frequencyFromWavelength(lambda);
     const E = P.photonEnergy(lambda);
@@ -135,5 +138,5 @@ export function create({ initial = 550e-9 } = {}) {
 
   if (stage) stage.start((dt) => { state.t += dt * 2.2; waves(state.t); });
   update();
-  return { el, controls, title: 'Electromagnetic wave', sub: 'Change λ and watch ν and E follow', dispose: () => stage?.dispose() };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Electromagnetic wave', sub: 'Change λ and watch ν and E follow', dispose: () => stage?.dispose() };
 }

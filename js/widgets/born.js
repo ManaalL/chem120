@@ -1,6 +1,6 @@
 // Lesson 2.7: build up a probability picture one position measurement at a time (Born),
 // or show the smooth density (Schrödinger's charge cloud).
-import { h, segmented, button, readouts, katexString } from '../ui/dom.js';
+import { h, segmented, button, readouts, katexString, bus } from '../ui/dom.js';
 import * as H from '../core/hydrogen.js';
 
 const CHOICES = ['1s', '2s', '2pz', '3dz2'];
@@ -12,6 +12,8 @@ export function create() {
     h('span', { style: { position: 'absolute', left: '50%', top: '6px', font: 'italic 14px var(--serif)', color: '#cfd8e1' } }, 'z'));
   const el = h('div', { class: 'pad', style: { maxWidth: '560px', margin: '0 auto' } }, wrap);
   const state = { orb: '1s', mode: 'dots', pts: [], count: 0 };
+  const ev = bus();
+  const snap = () => ({ orb: state.orb, mode: state.mode, count: state.count });
   let N = 400, rnd = H.mulberry32(5);
 
   const L = () => H.extentFor(H.getOrbital(state.orb).n) * 0.8;
@@ -70,6 +72,7 @@ export function create() {
     c.fillStyle = '#ffffff'; c.beginPath(); c.arc(N / 2, N / 2, Math.max(2, N / 200), 0, Math.PI * 2); c.fill();
     ro.set('n', state.count.toLocaleString('en-CA'));
     ro.set('size', `${Math.round(2 * l * H.A0_PM)} pm across`);
+    ev.emit(snap());
   }
   function reset() { state.pts = []; state.count = 0; rnd = H.mulberry32(5 + Math.floor(Math.random() * 1000)); computeMax(); draw(); }
 
@@ -84,5 +87,5 @@ export function create() {
     h('p', { class: 'ctl-hint' }, 'Each dot is one measurement of the electron\'s position, on a thin slice through the nucleus. Dot colour shows the sign of Ψ at that spot. One dot tells you almost nothing; thousands reveal |Ψ|².'));
   const resizeObs = new ResizeObserver(draw); resizeObs.observe(canvas);
   computeMax(); draw();
-  return { el, controls, title: 'Measuring an electron\'s position', sub: 'The Born interpretation, one dot at a time', dispose: () => resizeObs.disconnect() };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Measuring an electron\'s position', sub: 'The Born interpretation, one dot at a time', dispose: () => resizeObs.disconnect() };
 }

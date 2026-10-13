@@ -1,5 +1,5 @@
 // Lesson 2.5: de Broglie wavelength calculator with a size ruler, and electron diffraction.
-import { h, slider, select, readouts, button, segmented } from '../ui/dom.js';
+import { h, slider, select, readouts, button, segmented, bus } from '../ui/dom.js';
 import * as P from '../core/physics.js';
 
 const OBJECTS = [
@@ -22,6 +22,8 @@ export function createCalculator({ obj = 'e', v = 1e6 } = {}) {
   const sub = h('p', { style: { color: 'var(--muted)', margin: 0, fontSize: '14.5px' } });
   const el = h('div', { class: 'pad' }, big, sub, h('div', { style: { height: '12px' } }), ruler);
   const state = { obj, logv: Math.log10(v) };
+  const ev = bus();
+  const snap = () => ({ obj: state.obj, v: 10 ** state.logv, lambda: P.deBroglie(OBJECTS.find((o) => o.id === state.obj).m, 10 ** state.logv) });
   const LO = -40, HI = 0;
 
   function draw(lambda) {
@@ -47,7 +49,8 @@ export function createCalculator({ obj = 'e', v = 1e6 } = {}) {
     { key: 'p', label: 'Momentum, p = mv' },
     { key: 'l', label: 'λ = h/mv' },
   ]);
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const o = OBJECTS.find((x) => x.id === state.obj);
     const v = 10 ** state.logv;
     const lambda = P.deBroglie(o.m, v);
@@ -70,7 +73,7 @@ export function createCalculator({ obj = 'e', v = 1e6 } = {}) {
     h('div', { class: 'btn-row' }, button('10 m/s', () => { state.logv = 1; sp.set(1); update(); }, 'small'), button('Highway speed', () => { state.logv = Math.log10(28); sp.set(state.logv); update(); }, 'small'), button('Electron in an atom', () => { state.obj = 'e'; state.logv = Math.log10(2.19e6); sp.set(state.logv); controls.querySelector('select').value = 'e'; update(); }, 'small')),
     ro);
   update();
-  return { el, controls, title: 'de Broglie wavelength', sub: 'Any moving mass has a wavelength', dispose: () => resizeObs.disconnect() };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'de Broglie wavelength', sub: 'Any moving mass has a wavelength', dispose: () => resizeObs.disconnect() };
 }
 
 export function createDiffraction() {
@@ -78,7 +81,9 @@ export function createDiffraction() {
   const screen = h('canvas', { 'aria-label': 'Detector screen showing where electrons landed', style: { width: '100%', aspectRatio: '1', background: '#05070a', borderRadius: '4px' } });
   const el = h('div', { class: 'widget-row' }, h('div', { class: 'pad' }, side), h('div', { class: 'pad' }, screen));
   const state = { particle: 'e', V: 150, d: 0.21, rate: 120, hits: [], fired: 0 };
-  let raf = 0, last = performance.now(), acc = 0, visible = true;
+  const ev = bus();
+  const snap = () => ({ particle: state.particle, V: state.V, d: state.d, fired: state.fired });
+  let raf = 0, last = performance.now(), acc = 0, visible = true, lastEmit = 0;
   const flights = [];
 
   const lambda = () => state.particle === 'e' ? P.electronWavelength(state.V, false) : P.deBroglie(0.145, 40);
@@ -153,6 +158,7 @@ export function createDiffraction() {
       c.beginPath(); c.arc(x, y, 2.2, 0, Math.PI * 2); c.fill();
     }
     ro.set('n', state.fired.toLocaleString('en-CA'));
+    if (Math.abs(state.fired - lastEmit) >= 20) { lastEmit = state.fired; ev.emit(snap()); }
     raf = requestAnimationFrame(frame);
   }
 
@@ -162,7 +168,8 @@ export function createDiffraction() {
     { key: 'ang', label: 'First ring angle, 2θ' },
     { key: 'n', label: 'Particles detected' },
   ]);
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const l = lambda(); const rs = rings();
     ro.set('l', P.sci(l, 3) + ' m');
     ro.set('ratio', `λ/d = ${P.sci(l / (state.d * 1e-9), 2)}`);
@@ -186,5 +193,5 @@ export function createDiffraction() {
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }); io.observe(el);
   update();
   raf = requestAnimationFrame(frame);
-  return { el, controls, title: 'Electron diffraction', sub: 'Fire particles at a thin crystal', dispose() { cancelAnimationFrame(raf); resizeObs.disconnect(); io.disconnect(); } };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Electron diffraction', sub: 'Fire particles at a thin crystal', dispose() { cancelAnimationFrame(raf); resizeObs.disconnect(); io.disconnect(); } };
 }

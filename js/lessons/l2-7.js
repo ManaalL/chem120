@@ -1,82 +1,98 @@
-import { tex } from '../ui/dom.js';
-import { add, figure, check, choice } from './kit.js';
-import { create as born } from '../widgets/born.js';
+import { add, section, key, check, predict, revisit, myth, equationExplorer } from '../learn/blocks.js';
+import { sim } from '../learn/sim.js';
 
-export const goal = 'Describe what the Schrödinger equation does, what $\\Psi$ and $|\\Psi|^2$ mean, and how quantum numbers arise.';
+export const meta = {
+  minutes: 18,
+  objectives: [
+    'Say in plain words what the Schrödinger equation does',
+    'Explain what $\\Psi$ and $\\Psi^2$ mean',
+    'Use the rules for $n$, $l$ and $m_l$ to tell which orbitals exist',
+  ],
+};
 
 export function render(ctx) {
-  add(ctx, tex`
-    <h2>What the new theory needed</h2>
-    <p>Lessons 2.5 and 2.6 left two requirements for any theory of the electron in an atom:</p>
-    <ul>
-      <li>it must include the electron's wave behaviour (de Broglie), and</li>
-      <li>its answers must be probabilities, since exact paths cannot be known (Heisenberg).</li>
-    </ul>
-    <p>In 1926 Erwin Schrödinger proposed an equation that meets both.</p>
+  predict(ctx, {
+    id: '2.7',
+    q: 'Pictures often show an electron as a fuzzy "cloud" around the nucleus. What does that cloud actually show?',
+    options: [
+      { t: 'The electron smeared out into a thin mist' },
+      { t: 'A map of where the electron is likely to be found', right: true },
+      { t: 'The path the electron travels around the nucleus' },
+      { t: 'Many electrons spread around the atom' },
+    ],
+  });
 
-    <h2>The Schrödinger equation</h2>
-    <p>For a single electron moving around a nucleus, the equation is:</p>
-    $$-\frac{h^2}{8\pi^2 m_e}\left[\frac{\partial^2\Psi}{\partial x^2} + \frac{\partial^2\Psi}{\partial y^2} + \frac{\partial^2\Psi}{\partial z^2}\right] + V(x,y,z)\,\Psi = E\,\Psi$$
-    <p>Each part has a meaning, even if the calculus is new to you:</p>
-    $$\underbrace{-\frac{h^2}{8\pi^2 m_e}\nabla^2\Psi}_{\text{kinetic energy}} \;+\; \underbrace{V\,\Psi}_{\text{potential energy}} \;=\; \underbrace{E\,\Psi}_{\text{total energy}} \qquad V = \frac{(+e)(-e)}{4\pi\varepsilon_0\,r}$$
-    <p>$\Psi$ (psi) is a function of position called the <strong>wavefunction</strong>. The second derivatives measure how sharply $\Psi$ curves, which is linked to the electron's kinetic energy. $V$ is the electric potential energy between the proton and electron, which depends only on the distance $r$ between them. $\varepsilon_0 = 8.854 \times 10^{-12}$ C<sup>2</sup> J<sup>−1</sup> m<sup>−1</sup> is the permittivity of vacuum.</p>
-    <div class="callout"><p><b>What you need for this course.</b> You do not have to memorize, use or solve this equation. It is here so you know what it looks like and what it does. The solutions have been worked out, and the rest of the module uses them.</p></div>
-
-    <h3>Why only certain energies work</h3>
-    <p>The unknowns are $E$ and $\Psi$. The equation has sensible solutions, ones that stay finite and fade to zero far from the nucleus, only for certain values of $E$. Those are the allowed energies. Quantization is not assumed, as it was by Planck and Bohr. It comes out of the mathematics, the same way a drum skin can only vibrate in certain patterns. (Schrödinger's equation does resemble the equation for a vibrating drum skin, though nobody knows exactly how he arrived at it.)</p>
-    <p>Nobody has derived the Schrödinger equation from deeper principles. It is accepted because every prediction made with it has matched experiment.</p>
-
-    <h3>Spherical coordinates</h3>
-    <p>Because $V$ depends only on $r$, it is easier to describe the electron's position by its distance $r$ from the nucleus and two angles, $\theta$ (measured down from the $z$ axis) and $\phi$ (measured around it in the $xy$ plane):</p>
-    $$x = r\sin\theta\cos\phi \qquad y = r\sin\theta\sin\phi \qquad z = r\cos\theta \qquad r = \sqrt{x^2+y^2+z^2}$$
-
-    <h2>What $\Psi$ means</h2>
-    <p>$\Psi$ itself is just a mathematical function. It rises and falls like a wave and can be positive or negative, but it has no direct physical meaning. Its square does:</p>
-    <div class="key-eq">
-      $$|\Psi(x,y,z)|^2\,dV = \text{probability of finding the electron in a tiny volume } dV \text{ at } (x,y,z)$$
-      <p class="where">This is the <strong>Born interpretation</strong>. Where $|\Psi|^2$ is large, the electron is likely to be found.</p>
-    </div>
-    <p>Schrödinger himself preferred a different reading: the electron is smeared out into a cloud of charge, and $|\Psi|^2$ is the density of that cloud. This runs into problems. Experiments never detect a fraction of an electron, and a single electron's cloud would repel itself, which the equation does not include. Electrons behave as indivisible things.</p>
-    <p>The two pictures can be joined. Measure the electron's position once and you find it at one point. Measure again and it is somewhere else. Make thousands of measurements and plot every result: the dots pile up most thickly where $|\Psi|^2$ is largest, forming something that looks like a cloud. The "cloud" is a summary of many measurements, not a smeared-out electron. Chemists still talk about electron density and charge clouds, which is useful for molecules, but for one electron in hydrogen the cloud should not be taken literally.</p>
+  section(ctx, 'An equation for electron waves');
+  add(ctx, `
+    <p>Lessons 2.5 and 2.6 set two rules for any good theory of the electron: it has to treat the electron as a wave, and its answers have to be probabilities. In 1926 Erwin Schrödinger wrote down an equation that does both.</p>
+    <p>You don't need to solve it, or memorize it, in this course. But it helps to know what each piece means. Tap the parts.</p>
   `);
+  equationExplorer(ctx, {
+    q: 'The Schrödinger equation for hydrogen\'s electron',
+    texSrc: String.raw`\htmlClass{eq-part ke}{-\frac{h^2}{8\pi^2 m_e}\nabla^2\Psi} \;+\; \htmlClass{eq-part pe}{V\,\Psi} \;=\; \htmlClass{eq-part te}{E\,\Psi}`,
+    parts: {
+      ke: { name: 'Kinetic energy part', text: 'Measures how sharply the wave $\\Psi$ curves in space. A more tightly curved wave means more kinetic energy. The symbol $\\nabla^2$ just means "how much it curves in all three directions".' },
+      pe: { name: 'Potential energy part', text: '$V$ is the electric attraction between the proton and electron, $V = -e^2/4\\pi\\varepsilon_0 r$. It gets more negative the closer the electron is to the nucleus.' },
+      te: { name: 'Total energy', text: '$E$ is the total energy of the electron. The equation only has sensible solutions for certain values of $E$. Those are the allowed energies.' },
+    },
+    intro: 'In words: kinetic energy + potential energy = total energy, written for a wave.',
+  });
+  add(ctx, `
+    <p>Here is the important part. The unknowns are $E$ and $\\Psi$. <mark>The equation only has sensible solutions for certain values of $E$</mark>, ones where the wave fades to zero far from the nucleus instead of blowing up. So quantization isn't assumed, the way Bohr had to. It falls out of the maths, the same way a drum skin can only vibrate in certain patterns.</p>
+  `);
+  key(ctx, 'Solving the Schrödinger equation gives the allowed energies and, for each one, a <dfn data-g="wavefunction">wavefunction</dfn> $\\Psi$. <mark>Quantization comes out of the equation, not from an assumption.</mark>');
 
-  figure(ctx, born(), '<b>Figure 2.7.</b> Each dot is one measurement of the electron\'s position on a thin slice through the atom. Build up 2000 measurements, then switch to the cloud view: it is the smooth version of the same pattern.');
+  section(ctx, 'What Ψ means');
+  add(ctx, `
+    <p>$\\Psi$ itself is a wave that can be positive or negative. It can't be measured directly. Its square can:</p>
+  `);
+  key(ctx, '$$\\Psi^2 \\to \\text{probability of finding the electron at each point}$$ Where $\\Psi^2$ is large, <mark>the electron is likely to be found</mark>. This is the Born interpretation.', '$\\Psi^2$ gives the probability of finding the electron at each point (Born interpretation).');
+  add(ctx, `
+    <p>Measure the electron's position once and you find it at a single spot. Measure again and it is somewhere else. Plot thousands of measurements and the dots pile up most where $\\Psi^2$ is biggest. Try it.</p>
+  `);
+  sim(ctx, 'born');
+  myth(ctx, {
+    wrong: 'The electron is spread out like a cloud of charge.',
+    right: 'An electron is always found whole, at one point. The "cloud" is a summary of many measurements: a map of likelihood. Schrödinger himself first thought the electron was smeared out, but experiments never find part of an electron.',
+  });
 
-  add(ctx, tex`
-    <h2>What solving it gives for hydrogen</h2>
-    <p>Solving the equation for hydrogen (done in later courses such as CHEM 356 or PHYS 234) gives many solutions. Each one is a stable state of the atom with three properties.</p>
-    <h3>1. A wavefunction, called an orbital</h3>
-    <p>An <strong>orbital</strong> is a wavefunction $\Psi$ for one electron. Its square, $|\Psi|^2$, gives the probability of finding the electron at each point. Orbitals differ in size, shape and orientation, and are usually shown as pictures rather than equations. Lesson 2.8 covers those pictures.</p>
-    <h3>2. A set of quantum numbers</h3>
-    <p>Each orbital is labelled by three integers that fall out of the mathematics:</p>
+  section(ctx, 'Quantum numbers label the orbitals');
+  add(ctx, `
+    <p>Each solution for hydrogen is called an <dfn data-g="orbital">orbital</dfn>. Every orbital is labelled by three whole numbers that come out of the maths:</p>
     <div class="table-wrap"><table>
-      <thead><tr><th>Symbol</th><th>Name</th><th>Tells you</th><th>Allowed values</th></tr></thead>
+      <thead><tr><th>Symbol</th><th>Tells you</th><th>Allowed values</th></tr></thead>
       <tbody>
-        <tr><td>$n$</td><td>principal quantum number</td><td>size and energy</td><td>$1, 2, 3, \ldots$</td></tr>
-        <tr><td>$l$</td><td>orbital angular momentum quantum number</td><td>shape</td><td>$0, 1, 2, \ldots, n-1$</td></tr>
-        <tr><td>$m_l$</td><td>magnetic quantum number</td><td>orientation in space</td><td>$-l, \ldots, -1, 0, +1, \ldots, +l$</td></tr>
+        <tr><td>$n$</td><td>size and energy</td><td>$1, 2, 3, \\ldots$</td></tr>
+        <tr><td>$l$</td><td>shape</td><td>$0$ up to $n - 1$</td></tr>
+        <tr><td>$m_l$</td><td>which way it points</td><td>$-l$ up to $+l$</td></tr>
       </tbody>
     </table></div>
-    <p>Values of $l$ have letter names: $l = 0, 1, 2, 3$ are $s, p, d, f$, then $g$, $h$ and onward. A $2p$ orbital has $n = 2$ and $l = 1$. For each $l$ there are $2l + 1$ values of $m_l$, so there are 1 $s$, 3 $p$ and 5 $d$ orbitals in a set.</p>
-    <h3>3. A definite energy</h3>
-    $$E_n = -\frac{R_H}{n^2} \qquad R_H = 2.179 \times 10^{-18}\ \text{J}$$
-    <p>This is exactly Bohr's formula, now derived properly. In hydrogen the energy depends only on $n$, so all orbitals with the same $n$ have the same energy. Orbitals with equal energy are called <strong>degenerate</strong>. Shell $n$ contains $n^2$ orbitals.</p>
+    <p>Values of $l$ have letters: <mark>$l = 0, 1, 2, 3$ are s, p, d, f</mark>. So a 3d orbital has $n = 3$ and $l = 2$. Build some below and try breaking the rules.</p>
+  `);
+  sim(ctx, 'qnBuilder');
+  check(ctx, {
+    q: 'Which set of quantum numbers is <em>not</em> allowed?',
+    options: [
+      { t: '$n = 3,\\ l = 2,\\ m_l = -2$', why: 'Allowed: $l \\le n - 1 = 2$ and $m_l$ is between $-2$ and $+2$. This is a 3d orbital.' },
+      { t: '$n = 2,\\ l = 2,\\ m_l = 0$', right: true, why: '$l$ can be at most $n - 1 = 1$. There is no 2d orbital.' },
+      { t: '$n = 4,\\ l = 0,\\ m_l = 0$', why: 'Allowed. This is the 4s orbital.' },
+      { t: '$n = 2,\\ l = 1,\\ m_l = +1$', why: 'Allowed. This is one of the three 2p orbitals.' },
+    ],
+  });
+
+  section(ctx, 'Same energy for the whole shell');
+  add(ctx, `
+    <p>The energies that come out are exactly Bohr's: $E_n = -R_H/n^2$. They depend only on $n$. So every orbital in a shell has the same energy. Orbitals with equal energy are called <dfn data-g="degenerate">degenerate</dfn>.</p>
     <div class="table-wrap"><table>
-      <thead><tr><th>$n$</th><th>Allowed $l$</th><th>Orbitals</th><th>Count</th><th>Energy</th></tr></thead>
+      <thead><tr><th>$n$</th><th>Orbitals</th><th>How many</th><th>Energy</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>0</td><td>1s</td><td>1</td><td>$-2.179 \times 10^{-18}$ J</td></tr>
-        <tr><td>2</td><td>0, 1</td><td>2s; three 2p</td><td>4</td><td>$-0.545 \times 10^{-18}$ J</td></tr>
-        <tr><td>3</td><td>0, 1, 2</td><td>3s; three 3p; five 3d</td><td>9</td><td>$-0.242 \times 10^{-18}$ J</td></tr>
+        <tr><td>1</td><td>1s</td><td>1</td><td>$-2.179 \\times 10^{-18}$ J</td></tr>
+        <tr><td>2</td><td>2s, three 2p</td><td>4</td><td>$-0.545 \\times 10^{-18}$ J</td></tr>
+        <tr><td>3</td><td>3s, three 3p, five 3d</td><td>9</td><td>$-0.242 \\times 10^{-18}$ J</td></tr>
       </tbody>
     </table></div>
-    <p>Bohr's diagram had the right energies but only one state per level. The full picture has $n^2$ states at each level. In atoms with more than one electron the $s$, $p$ and $d$ orbitals of the same shell no longer share an energy; that comes in a later module.</p>
   `);
+  key(ctx, 'Shell $n$ has <mark>$n^2$ orbitals</mark>, and in hydrogen they all have the same energy.');
 
-  choice(ctx, 'Which set of quantum numbers is <em>not</em> allowed?', [
-    { text: '$n = 3,\\ l = 2,\\ m_l = -2$' },
-    { text: '$n = 2,\\ l = 2,\\ m_l = 0$', right: true },
-    { text: '$n = 4,\\ l = 0,\\ m_l = 0$' },
-    { text: '$n = 2,\\ l = 1,\\ m_l = +1$' },
-  ], '$l$ can be at most $n - 1$. With $n = 2$, $l$ can only be 0 or 1, so there is no $2d$ orbital.');
-  check(ctx, 'How many orbitals are in the $n = 4$ shell of hydrogen, and what are they?', '$4^2 = 16$: one 4s ($l = 0$), three 4p ($l = 1$), five 4d ($l = 2$) and seven 4f ($l = 3$). All 16 have the same energy in hydrogen.');
+  revisit(ctx, '2.7', 'The cloud is a probability map, $\\Psi^2$. Dense regions are where measurements usually find the electron. Each single measurement finds the whole electron at one point.');
 }

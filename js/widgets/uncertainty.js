@@ -1,5 +1,5 @@
 // Lesson 2.6: squeezing the position spread widens the momentum spread.
-import { h, slider, select, readouts } from '../ui/dom.js';
+import { h, slider, select, readouts, bus } from '../ui/dom.js';
 import { Plot } from '../ui/plot.js';
 import * as P from '../core/physics.js';
 
@@ -16,6 +16,8 @@ export function create() {
   const px = new Plot(left, { aspect: 0.7, xLabel: 'position x (pm)', yLabel: 'probability', hideY: true, padding: { l: 22 } });
   const pp = new Plot(right, { aspect: 0.7, xLabel: 'momentum p (10⁻²⁴ kg m s⁻¹)', yLabel: 'probability', hideY: true, padding: { l: 22 } });
   const state = { logdx: Math.log10(50), particle: 'e' };
+  const ev = bus();
+  const snap = () => ({ dx: 10 ** state.logdx, particle: state.particle });
 
   const ro = readouts([
     { key: 'dx', label: 'Δx' },
@@ -26,7 +28,8 @@ export function create() {
 
   const gaussian = (x, s) => Math.exp(-(x * x) / (2 * s * s)) / (s * Math.sqrt(2 * Math.PI));
 
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const dx = 10 ** state.logdx * 1e-12;
     const dp = P.minMomentumSpread(dx);
     const m = PARTICLES.find((p) => p.id === state.particle).m;
@@ -51,5 +54,5 @@ export function create() {
     ro,
     h('p', { class: 'ctl-hint' }, 'An H atom is about 100 pm across. Pin an electron down to that size and its speed becomes uncertain by hundreds of kilometres per second.'));
   update();
-  return { el, controls, title: 'Uncertainty principle', sub: 'Narrow one distribution and the other widens', dispose() { px.dispose(); pp.dispose(); } };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Uncertainty principle', sub: 'Narrow one distribution and the other widens', dispose() { px.dispose(); pp.dispose(); } };
 }

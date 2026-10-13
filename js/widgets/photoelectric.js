@@ -1,6 +1,6 @@
 // Lesson 2.3 (ii): photoelectric effect. Animated light hitting a metal, live energy balance,
 // and the plot of electron kinetic energy against frequency whose slope is h.
-import { h, slider, select, toggle, readouts } from '../ui/dom.js';
+import { h, slider, select, toggle, readouts, bus } from '../ui/dom.js';
 import { Plot } from '../ui/plot.js';
 import * as P from '../core/physics.js';
 
@@ -13,6 +13,8 @@ export function create({ metal = 'Na', lambda = 400 } = {}) {
   const plot = new Plot(plotHolder, { aspect: 0.42, xLabel: 'Frequency ν (10¹⁴ s⁻¹)', yLabel: 'KE (10⁻¹⁹ J)', ariaLabel: 'Kinetic energy of ejected electrons against light frequency' });
 
   const state = { metal, lambda, intensity: 0.6, others: false };
+  const ev = bus();
+  const snap = () => ({ metal: state.metal, lambda: state.lambda, intensity: state.intensity, others: state.others, ejected: calc().ejected, threshold: calc().thresholdWavelength / 1e-9 });
   const photons = [], electrons = [];
   let raf = 0, last = performance.now(), spawn = 0, W = 600, Hh = 260, visible = true;
 
@@ -110,7 +112,8 @@ export function create({ metal = 'Na', lambda = 400 } = {}) {
     raf = requestAnimationFrame(frame);
   }
 
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const m = metalObj(), res = calc();
     const nu = P.frequencyFromWavelength(state.lambda * P.NM);
     ro.set('E', `${P.sci(res.photonEnergy, 3)} J (${(res.photonEnergy / P.EV).toFixed(2)} eV)`);
@@ -141,7 +144,7 @@ export function create({ metal = 'Na', lambda = 400 } = {}) {
   const controls = h('div', {},
     metalSel,
     slider({ label: 'Wavelength of light', min: 100, max: 900, step: 1, value: state.lambda, format: (v) => `${v} nm`, onInput: (v) => { state.lambda = v; update(); } }),
-    slider({ label: 'Intensity (brightness)', min: 0, max: 1, step: 0.01, value: state.intensity, format: (v) => `${Math.round(v * 100)}%`, onInput: (v) => { state.intensity = v; } }),
+    slider({ label: 'Intensity (brightness)', min: 0, max: 1, step: 0.01, value: state.intensity, format: (v) => `${Math.round(v * 100)}%`, onInput: (v) => { state.intensity = v; update(); } }),
     toggle({ label: 'Show lines for the other metals', checked: false, onChange: (v) => { state.others = v; update(); } }),
     ro,
     h('p', { class: 'ctl-hint' }, 'Every metal\'s line has the same slope, Planck\'s constant h. Only the threshold ν₀ changes. Work functions are typical literature values; calcium uses the value from the module notes.'));
@@ -149,7 +152,7 @@ export function create({ metal = 'Na', lambda = 400 } = {}) {
   size(); update();
   raf = requestAnimationFrame(frame);
   return {
-    el, controls, title: 'Photoelectric effect', sub: 'Pick a metal, then change the light',
+    onChange: ev.on, getState: () => snap(), el, controls, title: 'Photoelectric effect', sub: 'Pick a metal, then change the light',
     dispose() { cancelAnimationFrame(raf); ro2.disconnect(); io.disconnect(); plot.dispose(); },
   };
 }

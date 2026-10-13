@@ -1,14 +1,16 @@
 // Lesson 2.9: Stern-Gerlach. A beam of H atoms passes a non-uniform magnetic field and
 // splits into two (quantum result) instead of smearing out (classical expectation).
-import { h, slider, segmented, readouts, button } from '../ui/dom.js';
+import { h, slider, segmented, readouts, button, bus } from '../ui/dom.js';
 
 export function create() {
   const side = h('canvas', { class: 'canvas-stage', 'aria-label': 'Side view of the Stern-Gerlach apparatus' });
   const screen = h('canvas', { 'aria-label': 'Collector screen, front view', style: { width: '100%', aspectRatio: '1', background: '#05070a', borderRadius: '4px', display: 'block' } });
   const el = h('div', { class: 'widget-row', style: { gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)' } }, h('div', { class: 'pad' }, side), h('div', { class: 'pad' }, h('p', { class: 'graph-title', style: { margin: '0 0 6px' } }, 'Collector screen, front view'), screen));
   const state = { grad: 0.8, mode: 'quantum', hits: [], up: 0, down: 0 };
+  const ev = bus();
+  const snap = () => ({ mode: state.mode, grad: state.grad, total: state.up + state.down });
   const atoms = [];
-  let raf = 0, last = performance.now(), acc = 0, visible = true;
+  let raf = 0, last = performance.now(), acc = 0, visible = true, emitTick = 0;
   const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 
   // Final vertical offset on the screen as a fraction of the screen half-height.
@@ -82,6 +84,7 @@ export function create() {
       c.globalAlpha = 0.85; c.beginPath(); c.arc(x, y, 1.8, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
     }
     const total = state.up + state.down;
+    if (++emitTick % 15 === 0) ev.emit(snap());
     ro.set('total', total.toLocaleString('en-CA'));
     if (state.mode === 'quantum' && state.grad > 0) {
       ro.set('up', `${state.up.toLocaleString('en-CA')} (${total ? Math.round((100 * state.up) / total) : 0}%)`);
@@ -102,5 +105,5 @@ export function create() {
   const resizeObs = new ResizeObserver(size); resizeObs.observe(el);
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }); io.observe(el);
   raf = requestAnimationFrame(frame);
-  return { el, controls, title: 'Stern-Gerlach experiment', sub: 'Send hydrogen atoms through a magnet', dispose() { cancelAnimationFrame(raf); resizeObs.disconnect(); io.disconnect(); } };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Stern-Gerlach experiment', sub: 'Send hydrogen atoms through a magnet', dispose() { cancelAnimationFrame(raf); resizeObs.disconnect(); io.disconnect(); } };
 }

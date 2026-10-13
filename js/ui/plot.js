@@ -1,7 +1,9 @@
 // Lightweight canvas plotting for the dark theme.
 // Handles axes, ticks, multiple series, marker lines and points, and resizes with its container.
 
-const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+// Colours come from the element's own context, so plots inside dark instrument panels
+// and plots on the page each pick up the right palette.
+const css = (el, name) => getComputedStyle(el).getPropertyValue(name).trim();
 
 function niceStep(range, target = 5) {
   const raw = range / target;
@@ -80,8 +82,8 @@ export class Plot {
     const Y = (y) => pad.t + ph - ((y - y0) / (y1 - y0)) * ph;
     this.map = { X, Y, pad, pw, ph, x0, x1, y0, y1 };
 
-    const grid = css('--plot-grid') || '#253040';
-    const axis = css('--muted') || '#93a0b0';
+    const grid = css(this.canvas, '--plot-grid') || '#253040';
+    const axis = css(this.canvas, '--muted') || '#93a0b0';
     const font = '12px "IBM Plex Sans", system-ui, sans-serif';
     c.font = font;
     c.fillStyle = axis;

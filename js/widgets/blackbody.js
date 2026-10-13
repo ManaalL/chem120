@@ -1,5 +1,5 @@
 // Lesson 2.3 (i): Planck's law against the classical Rayleigh-Jeans prediction.
-import { h, slider, toggle, readouts } from '../ui/dom.js';
+import { h, slider, toggle, readouts, bus } from '../ui/dom.js';
 import { Plot } from '../ui/plot.js';
 import * as P from '../core/physics.js';
 
@@ -18,6 +18,8 @@ export function create({ T = 5000 } = {}) {
   const el = h('div', {}, holder);
   const plot = new Plot(holder, { aspect: 0.55, xLabel: 'Wavelength (µm)', yLabel: 'Intensity (relative)', yFormat: (v) => +v.toFixed(2), ariaLabel: 'Blackbody intensity against wavelength' });
   const state = { T, refs: true, rj: true };
+  const ev = bus();
+  const snap = () => ({ T: state.T, rj: state.rj, refs: state.refs });
 
   const ro = readouts([
     { key: 'peak', label: 'Peak wavelength, λ<sub>max</sub>' },
@@ -26,7 +28,8 @@ export function create({ T = 5000 } = {}) {
     { key: 'power', label: 'Total power vs 300 K (∝ T⁴)' },
   ]);
 
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const T = state.T;
     const peak = P.wienPeak(T);
     const peakUm = peak * 1e6;
@@ -73,5 +76,5 @@ export function create({ T = 5000 } = {}) {
     ro,
     h('p', { class: 'ctl-hint' }, 'The dashed line is the Rayleigh-Jeans law. It matches at long wavelengths and climbs without limit at short ones, the "ultraviolet catastrophe". Planck\'s curve turns over and falls to zero.'));
   update();
-  return { el, controls, title: 'Blackbody radiation', sub: "Planck's law against classical physics", dispose: () => plot.dispose() };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Blackbody radiation', sub: "Planck's law against classical physics", dispose: () => plot.dispose() };
 }

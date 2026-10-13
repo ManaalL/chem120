@@ -139,3 +139,13 @@ export const store = {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ }
   },
 };
+
+// Tiny event channel. Widgets use it to report their state so lessons can react
+// (for example, ticking off a "Try this" task when the reader reaches a goal).
+export function bus() {
+  const subs = new Set();
+  return {
+    on(fn) { subs.add(fn); return () => subs.delete(fn); },
+    emit(v) { for (const fn of subs) { try { fn(v); } catch (e) { console.error(e); } } },
+  };
+}

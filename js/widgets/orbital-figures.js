@@ -1,5 +1,5 @@
 // Lesson 2.8 widgets: the five representations of one orbital, and a radial plot tool for any n, l.
-import { h, katexString, segmented, readouts, toggle } from '../ui/dom.js';
+import { h, katexString, segmented, readouts, toggle, bus } from '../ui/dom.js';
 import { OrbitalView, PHASE } from './orbital-engine.js';
 import { RadialGraphs } from './radial-graphs.js';
 import * as H from '../core/hydrogen.js';
@@ -29,6 +29,8 @@ export function createRepresentations({ orbital = '3pz' } = {}) {
   graphs.el.style.gridTemplateColumns = '1fr';
   const view = new OrbitalView(vp, { orbital, surface: true, cloud: false, autoRotate: true, points: 30000 });
   const state = { orbital, mode: 'surface' };
+  const ev = bus();
+  const snap = () => ({ orbital: state.orbital, view: state.view || 'surface', nodes: !!state.nodes });
 
   const ro = readouts([
     { key: 'qn', label: 'n, l' },
@@ -37,7 +39,8 @@ export function createRepresentations({ orbital = '3pz' } = {}) {
     { key: 'max', label: 'Maxima in R², n − l' },
     { key: 'rmp', label: 'Most probable radius' },
   ]);
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const o = H.getOrbital(state.orbital);
     badge.innerHTML = katexString(o.tex);
     const { nodes, rmp } = graphs.update(o.n, o.l);
@@ -49,18 +52,20 @@ export function createRepresentations({ orbital = '3pz' } = {}) {
   }
   const controls = h('div', {},
     orbitalPicker(orbital, (id) => { state.orbital = id; view.set({ orbital: id }); update(); }),
-    segmented({ label: '3D view', options: [{ value: 'surface', label: 'Boundary surface' }, { value: 'cloud', label: 'Scatter plot' }, { value: 'both', label: 'Both' }], value: 'surface', onChange: (v) => { view.set({ surface: v !== 'cloud', cloud: v !== 'surface' }); } }),
-    toggle({ label: 'Show nodes', checked: false, onChange: (v) => view.set({ nodes: v }) }),
+    segmented({ label: '3D view', options: [{ value: 'surface', label: 'Boundary surface' }, { value: 'cloud', label: 'Scatter plot' }, { value: 'both', label: 'Both' }], value: 'surface', onChange: (v) => { view.set({ surface: v !== 'cloud', cloud: v !== 'surface' }); state.view = v; ev.emit(snap()); } }),
+    toggle({ label: 'Show nodes', checked: false, onChange: (v) => { view.set({ nodes: v }); state.nodes = v; ev.emit(snap()); } }),
     h('p', { class: 'legend' }, h('span', {}, h('i', { style: { background: PHASE.plus } }), 'Ψ > 0'), h('span', {}, h('i', { style: { background: PHASE.minus } }), 'Ψ < 0')),
     ro);
   update();
-  return { el, controls, title: 'Five views of one orbital', sub: '3D on the left, radial plots on the right', dispose() { view.dispose(); graphs.dispose(); } };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Five views of one orbital', sub: '3D on the left, radial plots on the right', dispose() { view.dispose(); graphs.dispose(); } };
 }
 
 export function createRadialTool({ n = 4, l = 0 } = {}) {
   const box = h('div', { class: 'pad' });
   const graphs = new RadialGraphs(box);
   const state = { n, l };
+  const ev = bus();
+  const snap = () => ({ n: state.n, l: state.l });
   const ro = readouts([
     { key: 'name', label: 'Orbital' },
     { key: 'rn', label: 'Radial nodes, n − l − 1' },
@@ -74,7 +79,8 @@ export function createRadialTool({ n = 4, l = 0 } = {}) {
   function lSeg() {
     lHolder.replaceChildren(segmented({ label: 'l (shape)', options: Array.from({ length: state.n }, (_, i) => ({ value: i, label: `${i} (${H.SUBSHELL[i]})` })), value: state.l, onChange: (v) => { state.l = v; update(); } }));
   }
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const { nodes, rmp } = graphs.update(state.n, state.l);
     ro.set('name', `${state.n}${H.SUBSHELL[state.l]}`);
     ro.set('rn', `${nodes.length}`);
@@ -89,5 +95,5 @@ export function createRadialTool({ n = 4, l = 0 } = {}) {
     lHolder, ro,
     h('p', { class: 'ctl-hint' }, 'Radial plots depend only on n and l, so every p orbital of one shell shares the same plots. Use this to check sketches for orbitals beyond n = 3.'));
   lSeg(); update();
-  return { el: box, controls, title: 'Radial plots for any orbital', sub: 'n from 1 to 6, any allowed l', dispose: () => graphs.dispose() };
+  return { onChange: ev.on, getState: () => snap(), el: box, controls, title: 'Radial plots for any orbital', sub: 'n from 1 to 6, any allowed l', dispose: () => graphs.dispose() };
 }

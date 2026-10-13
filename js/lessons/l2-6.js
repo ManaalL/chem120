@@ -1,44 +1,76 @@
-import { tex } from '../ui/dom.js';
-import { add, figure, check } from './kit.js';
-import { create as uncertainty } from '../widgets/uncertainty.js';
+import { add, section, key, check, predict, revisit, myth } from '../learn/blocks.js';
+import { worked, yourTurn } from '../learn/worked.js';
+import { sim } from '../learn/sim.js';
 
-export const goal = 'Use $\\Delta x\\,\\Delta p \\ge h/4\\pi$ and explain why it rules out definite electron orbits.';
+const H4PI = 6.626e-34 / (4 * Math.PI), me = 9.109e-31;
+
+export const meta = {
+  minutes: 15,
+  objectives: [
+    'Use $\\Delta x\\,\\Delta p \\ge h/4\\pi$ to find the smallest possible uncertainty',
+    'Explain why this rules out neat electron orbits',
+    'Explain why we never notice it for everyday objects',
+  ],
+};
 
 export function render(ctx) {
-  add(ctx, tex`
-    <h2>Measuring changes what you measure</h2>
-    <p>Werner Heisenberg pointed out that an observer can never be fully separated from the system being observed. To see where an electron is, you have to hit it with something, such as a photon. That collision changes the electron's momentum by an amount you cannot predict. Measuring the momentum precisely instead disturbs the position. There is no way around this, however good the equipment.</p>
-    <p>In 1927 Heisenberg put a number on the limit for position and momentum measured at the same time:</p>
-    <div class="key-eq">
-      $$\Delta x\,\Delta p \ \ge\ \frac{h}{4\pi} \qquad\Longrightarrow\qquad \Delta p \ \ge\ \frac{h}{4\pi\,\Delta x}$$
-      <p class="where">$\Delta x$ is the uncertainty in position. $\Delta p = m\,\Delta v$ is the uncertainty in momentum. $h/4\pi = 5.27 \times 10^{-35}$ J s.</p>
-    </div>
-    <p>The product of the two uncertainties has a minimum. The more precisely you know where a particle is, the less precisely you can know where it is going, and the reverse.</p>
+  predict(ctx, {
+    id: '2.6',
+    q: 'Suppose you could pin down exactly where an electron is. How well could you know its speed at the same moment?',
+    options: [
+      { t: 'Just as exactly, with a good enough instrument' },
+      { t: 'Not at all: its speed would be completely uncertain', right: true },
+      { t: 'It would have to be standing still' },
+    ],
+  });
+
+  section(ctx, 'Looking changes what you look at');
+  add(ctx, `
+    <p>To see where an electron is, you have to bounce something off it, like a photon. That collision gives the electron an unpredictable kick, changing its momentum. Try to measure the momentum carefully instead, and you lose track of the position.</p>
+    <p>Imagine finding a marble on a dark floor by sweeping a stick around. The moment you touch it, you know where it was, but you have knocked it rolling in some direction you can't predict.</p>
+    <p>In 1927 Werner Heisenberg put a number on the limit:</p>
   `);
+  key(ctx, '$$\\Delta x\\,\\Delta p \\ge \\frac{h}{4\\pi}$$ The <dfn data-g="uncertainty">uncertainty</dfn> in position times the uncertainty in momentum can never be smaller than $h/4\\pi$. <mark>Narrow one, and the other must widen.</mark>', '$\\Delta x\\,\\Delta p \\ge h/4\\pi$. Narrow one uncertainty and the other must widen.');
+  add(ctx, '<p>Since $p = mv$, a momentum spread means a speed spread: $\\Delta p = m\\,\\Delta v$.</p>');
+  sim(ctx, 'uncertainty');
 
-  figure(ctx, uncertainty(), '<b>Figure 2.6.</b> The particle\'s position spread (left) and the smallest possible momentum spread that goes with it (right). Narrow Δx and watch Δp widen.');
+  section(ctx, 'An electron inside an atom');
+  worked(ctx, {
+    title: 'How uncertain is the speed of an electron in hydrogen?',
+    problem: 'A hydrogen atom is about 100 pm across, so an electron inside has $\\Delta x \\approx 1 \\times 10^{-10}$ m. Find the smallest possible $\\Delta v$.',
+    steps: [
+      { say: 'Rearrange: $\\Delta p \\ge h/(4\\pi\\Delta x)$, and $\\Delta v = \\Delta p / m$.', math: '\\Delta v \\ge \\frac{h}{4\\pi\\, m_e\\, \\Delta x}' },
+      { say: 'Put in the numbers.', math: '\\Delta v \\ge \\frac{6.626 \\times 10^{-34}}{4\\pi(9.109 \\times 10^{-31})(1 \\times 10^{-10})} = 5.8 \\times 10^{5}\\ \\text{m s}^{-1}' },
+      { say: 'Compare with Bohr\'s speed for the $n = 1$ orbit, $2.2 \\times 10^{6}$ m s<sup>−1</sup>.', why: 'The uncertainty is about a quarter of the whole speed. You couldn\'t say how fast the electron is going, so you can\'t trace a neat circle either.' },
+    ],
+    answer: 'At least 580 km per second of uncertainty. <mark>A definite orbit is impossible.</mark>',
+  });
+  yourTurn(ctx, {
+    problem: 'Now a 0.145 kg baseball whose position is known to within 1 µm ($1 \\times 10^{-6}$ m). Find the smallest $\\Delta v$.',
+    steps: [
+      { ask: '$\\Delta v \\ge h / (4\\pi m \\Delta x)$:', answer: H4PI / (0.145 * 1e-6), unit: 'm s<sup>−1</sup>', hint: '$4\\pi \\times 0.145 \\times 10^{-6} = 1.82 \\times 10^{-6}$. Divide $6.626 \\times 10^{-34}$ by that.' },
+    ],
+    done: 'About $3.6 \\times 10^{-28}$ m s<sup>−1</sup>. No instrument could ever notice that. For big objects the uncertainty principle changes nothing we can measure.',
+  });
+  check(ctx, {
+    q: 'An electron and a proton are each known to be somewhere in a 10 pm space. Which has the bigger uncertainty in speed?',
+    options: [
+      { t: 'The proton', why: 'Same $\\Delta x$ gives the same $\\Delta p$. But $\\Delta v = \\Delta p/m$, and the proton is heavier.' },
+      { t: 'The electron', right: true, why: '$\\Delta v = \\Delta p / m$. The electron is 1836 times lighter, so its speed is 1836 times more uncertain.' },
+      { t: 'They are the same', why: 'Their momentum uncertainties match, but their masses don\'t.' },
+    ],
+  });
 
-  add(ctx, tex`
-    <h3>Worked example: an electron held inside an atom</h3>
-    <p>A hydrogen atom is roughly 100 pm across, so an electron inside it has $\Delta x \approx 1 \times 10^{-10}$ m. What is the smallest possible uncertainty in its speed?</p>
-    $$\Delta v \ge \frac{h}{4\pi\,m_e\,\Delta x} = \frac{6.626 \times 10^{-34}\ \text{J s}}{4\pi(9.109 \times 10^{-31}\ \text{kg})(1 \times 10^{-10}\ \text{m})} = 5.8 \times 10^{5}\ \text{m s}^{-1}$$
-    <p>Bohr's model gives the electron a speed of $2.2 \times 10^{6}$ m s<sup>−1</sup> in the $n = 1$ orbit. The unavoidable uncertainty is about a quarter of that speed. A neat circular orbit, with a definite position and speed at every instant, is not possible.</p>
-
-    <h3>The same calculation for a baseball</h3>
-    <p>Locate a 0.145 kg baseball to within 1 µm ($\Delta x = 1 \times 10^{-6}$ m):</p>
-    $$\Delta v \ge \frac{6.626 \times 10^{-34}}{4\pi(0.145)(1 \times 10^{-6})} = 3.6 \times 10^{-28}\ \text{m s}^{-1}$$
-    <p>No instrument could detect that. For large objects the uncertainty principle changes nothing we can measure, which is why Newton's laws work so well for them.</p>
-
-    <h2>What this means for electrons in atoms</h2>
-    <p>Because position and momentum cannot both be known exactly, an electron does not have a definite path, or trajectory. Newton's laws need a starting position and velocity to predict a path, so they cannot be used for electrons in atoms.</p>
-    <p>Physicists responded by changing the question. Instead of asking exactly where the electron is and how it moves, quantum theory asks <strong>where the electron is likely to be found</strong>. That shift to probability is built into Schrödinger's equation in the next lesson.</p>
-
-    <div class="callout"><p><b>A common mix-up.</b> The uncertainty principle is not about clumsy instruments. Even a perfect measurement cannot beat $h/4\pi$. It reflects the wave nature from lesson 2.5: a wave squeezed into a small space must be built from many wavelengths, and so many momenta.</p></div>
-
-    <h3>Going further: physics and philosophy</h3>
-    <p>The historian Max Jammer argued that philosophical ideas helped shape quantum theory. Bohr attended lectures by the Danish philosopher Harald Høffding, who held that an observer is always part of the system being explained, never a detached spectator. Heisenberg later said that Bohr's way of thinking strongly influenced his own.</p>
+  section(ctx, 'From paths to probabilities');
+  add(ctx, `
+    <p>To predict a path, Newton's laws need a starting position and a starting velocity. For an electron in an atom you can't have both. So instead of asking <em>where exactly is the electron and where is it going</em>, quantum theory asks <mark>where is the electron likely to be found</mark>.</p>
   `);
+  key(ctx, 'Electrons in atoms don\'t have paths. We describe them with <mark>probabilities</mark>, which is what the Schrödinger equation (lesson 2.7) gives us.');
+  myth(ctx, {
+    wrong: 'The uncertainty principle just means our instruments are not good enough yet.',
+    right: 'Even a perfect measurement can\'t beat $h/4\\pi$. It comes from the wave nature of particles: a wave squeezed into a small space has to be built from a wide spread of wavelengths, and so a wide spread of momenta.',
+  });
 
-  check(ctx, 'An electron\'s position is known to within 10 pm. What is the smallest uncertainty in its momentum?', '$\\Delta p \\ge h/(4\\pi\\Delta x) = (6.626 \\times 10^{-34})/(4\\pi \\times 1.0 \\times 10^{-11}) = 5.3 \\times 10^{-24}$ kg m s<sup>−1</sup>. Set Δx to 10 pm in Figure 2.6 to check.');
-  check(ctx, 'An electron and a proton are each confined to boxes of the same size. Which one has the larger uncertainty in speed, and why?', 'For the same $\\Delta x$, $\\Delta p$ is the same, but $\\Delta v = \\Delta p/m$. The proton is about 1836 times heavier, so its speed uncertainty is about 1836 times smaller. Light particles are affected most.');
+  revisit(ctx, '2.6', 'If $\\Delta x$ shrank to zero, $\\Delta p \\ge h/(4\\pi \\cdot 0)$ would be infinite. Knowing the position exactly means knowing nothing about the speed. In practice, the narrower you pin it down, the wider the speed spread gets.');
+  void me;
 }

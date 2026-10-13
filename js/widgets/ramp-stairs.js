@@ -1,13 +1,15 @@
 // Lesson 2.1: a ball on a ramp (any height allowed) beside a ball on stairs (only step heights allowed).
 import * as THREE from 'three';
 import { createStage, textSprite } from '../ui/stage.js';
-import { h, slider, segmented, readouts } from '../ui/dom.js';
+import { h, slider, segmented, readouts, bus } from '../ui/dom.js';
 import { C, sci } from '../core/physics.js';
 
 export function create() {
-  const el = h('div', { class: 'viewport' }, h('p', { class: 'viewport-note' }, 'Drag the slider, or drag the scene to look around.'));
+  const el = h('div', { class: 'viewport', style: { aspectRatio: '16 / 8' } }, h('p', { class: 'viewport-note' }, 'Drag the slider, or drag the scene to look around.'));
   const stage = createStage(el, { position: [0, 2.6, 8.2], target: [0, 1.1, 0], minDistance: 5, maxDistance: 14 });
   const state = { p: 0.35, mode: 'even' };
+  const ev = bus();
+  const snap = () => ({ p: state.p, mode: state.mode, step: (() => { const lv = levels(); let k = 0; for (let i = 0; i < lv.length; i++) if (state.p >= lv[i] - 1e-9) k = i; return k; })() });
   const W = 2.6, HGT = 2.2, STEPS = 5;
 
   let rampBall, stairBall, stairGroup, labels;
@@ -32,8 +34,8 @@ export function create() {
     stairBall = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: 0x40c4e6, roughness: 0.3, emissive: 0x0b3340 }));
     scene.add(rampBall, stairBall);
 
-    const t1 = textSprite(THREE, 'Ramp: any height', { scale: 0.32 }); t1.position.set(-1.8, -0.35, 0.8); scene.add(t1);
-    const t2 = textSprite(THREE, 'Stairs: only step heights', { scale: 0.32 }); t2.position.set(1.8, -0.35, 0.8); scene.add(t2);
+    const t1 = textSprite(THREE, 'Ramp: any height', { scale: 0.32 }); t1.position.set(-1.8, 2.75, -0.5); scene.add(t1);
+    const t2 = textSprite(THREE, 'Stairs: only step heights', { scale: 0.32 }); t2.position.set(1.8, 2.75, -0.5); scene.add(t2);
     stage.camera.position.set(0, 2.6, 8.2);
   }
 
@@ -69,7 +71,8 @@ export function create() {
     { key: 'h', label: 'Hydrogen energy for this step' },
   ]);
 
-  function update() {
+  function update() { update0(); ev.emit(snap()); }
+  function update0() {
     const lv = levels();
     const p = state.p;
     // stairs: the ball sits on the highest step it has fully reached
@@ -97,5 +100,5 @@ export function create() {
 
   buildStairs(); update();
   stage?.start();
-  return { el, controls, title: 'Ramp and stairs', sub: 'Continuous energy versus quantized energy', dispose: () => stage?.dispose() };
+  return { onChange: ev.on, getState: () => snap(), el, controls, title: 'Ramp and stairs', sub: 'Continuous energy versus quantized energy', dispose: () => stage?.dispose() };
 }

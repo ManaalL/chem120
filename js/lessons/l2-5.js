@@ -1,60 +1,91 @@
-import { tex } from '../ui/dom.js';
-import { add, figure, spotlight, check } from './kit.js';
-import { createCalculator, createDiffraction } from '../widgets/debroglie.js';
+import { add, section, key, check, predict, revisit, myth, spotlight } from '../learn/blocks.js';
+import { worked, yourTurn } from '../learn/worked.js';
+import { sim } from '../learn/sim.js';
 
-export const goal = 'Calculate the de Broglie wavelength of a moving particle and explain why wave behaviour matters for electrons but not for everyday objects.';
+const h = 6.626e-34, me = 9.109e-31;
+
+export const meta = {
+  minutes: 18,
+  objectives: [
+    'Calculate the wavelength of a moving particle with $\\lambda = h/mv$',
+    'Explain why electrons show wave behaviour and baseballs don\'t',
+    'Describe the experiment that proved electrons behave as waves',
+  ],
+};
 
 export function render(ctx) {
-  add(ctx, tex`
-    <h2>Two ideas that replaced Bohr's model</h2>
-    <p>Bohr's model matched hydrogen's spectrum but could not say why the energy is quantized. The breakthrough came from two ideas in the 1920s. The first, covered here, is that electrons behave like waves. The second, in lesson 2.6, is that their exact behaviour can never be fully known.</p>
+  predict(ctx, {
+    id: '2.5',
+    q: 'Light makes rings when it passes through a tiny gap, because it is a wave. If you fire electrons through gaps between atoms, what do you think you\'ll see?',
+    options: [
+      { t: 'Just a spot where the electrons hit, like bullets' },
+      { t: 'Rings, like light makes', right: true },
+      { t: 'Nothing; electrons can\'t pass between atoms' },
+    ],
+  });
 
-    <h2>Light already had two faces</h2>
-    <p>By the 1920s it was clear that light behaves as a wave in some experiments and as a stream of particles in others.</p>
-    <ul>
-      <li><strong>Diffraction</strong> shows light acting as a wave. When light passes through a gap or around an obstacle about the same size as its wavelength, it spreads out and forms a pattern of bright and dark rings where waves add together or cancel.</li>
-      <li><strong>The photoelectric effect</strong> shows light acting as particles, photons that each deliver a fixed packet of energy.</li>
-    </ul>
-
-    <h2>de Broglie's hypothesis</h2>
-    <p>In 1924 Louis de Broglie reasoned that if light, which we think of as a wave, can act like particles, then particles might act like waves. A particle of mass $m$ moving at speed $v$ has momentum $p = mv$. Using Einstein's theory of relativity, de Broglie argued that such a particle has a wavelength:</p>
-    <div class="key-eq">
-      $$\lambda_{dB} = \frac{h}{p} = \frac{h}{mv}$$
-      <p class="where">$\lambda_{dB}$ is the de Broglie wavelength. Use SI units: mass in kg, speed in m s<sup>−1</sup>, giving $\lambda$ in m.</p>
-    </div>
-    <p>Because $h$ is so small, the wavelength is noticeable only when $mv$ is also very small. That points straight at electrons.</p>
+  section(ctx, 'Light is a wave and a particle');
+  add(ctx, `
+    <p>By the 1920s light had two personalities. When it passes through a narrow gap it spreads out and makes rings, called <dfn data-g="diffraction">diffraction</dfn>. Only waves do that. In the photoelectric effect it acts like separate particles, photons. <mark>Which one you see depends on the experiment.</mark></p>
   `);
 
-  figure(ctx, createCalculator(), '<b>Figure 2.5a.</b> The de Broglie wavelength on a scale from 10<sup>−40</sup> m to 1 m. Compare an electron with a baseball at the same speed.');
-
-  add(ctx, tex`
-    <h3>Worked example: an electron and a baseball</h3>
-    <p>Find the de Broglie wavelength of an electron moving at $1.0 \times 10^{6}$ m s<sup>−1</sup>, and of a 0.145 kg baseball thrown at 40 m s<sup>−1</sup>.</p>
-    $$\lambda_{e^-} = \frac{6.626 \times 10^{-34}\ \text{J s}}{(9.109 \times 10^{-31}\ \text{kg})(1.0 \times 10^{6}\ \text{m s}^{-1})} = 7.3 \times 10^{-10}\ \text{m} = 730\ \text{pm}$$
-    $$\lambda_\text{ball} = \frac{6.626 \times 10^{-34}\ \text{J s}}{(0.145\ \text{kg})(40\ \text{m s}^{-1})} = 1.1 \times 10^{-34}\ \text{m}$$
-    <p>The electron's wavelength is a few times the spacing between atoms in a solid, so a crystal can diffract it. The baseball's wavelength is about $10^{19}$ times smaller than a proton. No gap could ever be that narrow, which is why we never see baseballs diffract. (J s is the same as kg m<sup>2</sup> s<sup>−1</sup>, so the units cancel to metres.)</p>
-
-    <h2>Electrons do diffract</h2>
-    <p>In 1927 two groups confirmed de Broglie's idea. Clinton Davisson and Lester Germer in the United States bounced electrons off a nickel crystal, and George Paget Thomson in Scotland sent electrons through thin metal foils. Both saw diffraction patterns, exactly as if the electrons were waves. The regular gaps between atoms in the metal acted as the openings. The electrons' speed had to be chosen so their wavelength matched those gaps.</p>
+  section(ctx, 'de Broglie\'s idea: particles are waves too');
+  add(ctx, `
+    <p>In 1924 Louis de Broglie flipped it around. If light, a wave, can act like particles, maybe particles can act like waves. A particle with mass $m$ moving at speed $v$ has <dfn data-g="momentum">momentum</dfn> $p = mv$. He proposed it has a wavelength:</p>
   `);
+  key(ctx, '$$\\lambda = \\frac{h}{p} = \\frac{h}{mv}$$ Because $h$ is so tiny, the wavelength is <mark>only big enough to matter when $mv$ is tiny too</mark>, as for an electron.', '$\\lambda = h/mv$. Only noticeable for very light particles like electrons.');
+  sim(ctx, 'debroglie');
+  worked(ctx, {
+    title: 'An electron and a baseball',
+    problem: 'Find the wavelength of an electron at $1.0 \\times 10^{6}$ m s<sup>−1</sup>, and of a 0.145 kg baseball at 40 m s<sup>−1</sup>.',
+    steps: [
+      { say: 'Electron: put its mass and speed into $\\lambda = h/mv$.', math: '\\lambda = \\frac{6.626 \\times 10^{-34}}{(9.109 \\times 10^{-31})(1.0 \\times 10^{6})} = 7.3 \\times 10^{-10}\\ \\text{m} = 730\\ \\text{pm}', why: 'J s is the same as kg m² s⁻¹, so dividing by kg × m s⁻¹ leaves metres.' },
+      { say: 'Baseball: same formula.', math: '\\lambda = \\frac{6.626 \\times 10^{-34}}{(0.145)(40)} = 1.1 \\times 10^{-34}\\ \\text{m}' },
+      { say: 'Compare each with the size of an atom, about $10^{-10}$ m.', why: 'Diffraction only happens when the wavelength is similar to the size of the gap. Atoms in a crystal make gaps about $10^{-10}$ m wide.' },
+    ],
+    answer: 'The electron\'s wavelength is a few atoms wide, so crystals can diffract it. The baseball\'s is $10^{24}$ times smaller than an atom. Nothing could ever diffract it.',
+  });
+  yourTurn(ctx, {
+    problem: 'A proton ($m = 1.673 \\times 10^{-27}$ kg) moves at $2.0 \\times 10^{4}$ m s<sup>−1</sup>. What is its de Broglie wavelength?',
+    steps: [
+      { ask: 'Momentum, $p = mv$:', answer: 1.673e-27 * 2e4, unit: 'kg m s<sup>−1</sup>', hint: 'Multiply $1.673 \\times 10^{-27}$ by $2.0 \\times 10^{4}$.' },
+      { ask: 'Wavelength, $\\lambda = h/p$, in picometres:', answer: h / (1.673e-27 * 2e4) / 1e-12, unit: 'pm', hint: 'Divide $6.626 \\times 10^{-34}$ by your momentum to get metres, then divide by $10^{-12}$.' },
+    ],
+    done: 'About 20 pm, small but still within reach of atom-sized gaps. Protons and even whole atoms have been diffracted.',
+  });
 
-  figure(ctx, createDiffraction(), '<b>Figure 2.5b.</b> Electrons fired through a thin metal foil. Each one arrives at a single point. Keep firing and the dots build up rings. Switch to baseballs: their wavelength is so short that the rings collapse into one spot.');
-
-  add(ctx, tex`
-    <h2>So what is an electron?</h2>
-    <p>In some experiments electrons act like particles: each one lands at a single point. In others they act like waves: many of them together make an interference pattern. A particle is a small thing in one place; a wave is spread out. Nothing can be both in the everyday sense.</p>
-    <p>The working answer is that an electron is neither. It is something our everyday ideas of "particle" and "wave" each describe only in part, depending on the experiment. Our intuition was built from large objects, so it is not surprising that it fails here.</p>
-    <div class="callout"><p><b>The main point of this lesson.</b> A complete description of an electron in an atom must include its wave behaviour. Schrödinger's equation in lesson 2.7 does exactly that.</p></div>
-
-    <h3>Going further: a wave explanation for Bohr's rule</h3>
-    <p>de Broglie's idea explains the rule Bohr had to assume. Picture an electron wave wrapped around a circular orbit. It only fits if a whole number of wavelengths matches the circumference, otherwise the wave cancels itself out:</p>
-    $$2\pi r = n\lambda = n\frac{h}{m_e v} \quad\Longrightarrow\quad m_e v r = n\frac{h}{2\pi}$$
-    <p>That is Bohr's angular momentum condition. Quantization appears because only certain waves fit, the same reason a guitar string only plays certain notes. The orbit picture itself is still wrong, but the idea that confined waves have only certain allowed patterns carries straight into lesson 2.7.</p>
+  section(ctx, 'The proof: electrons make rings');
+  add(ctx, `
+    <p>In 1927, two teams fired electrons at thin metal crystals. Davisson and Germer in the US bounced them off nickel; G. P. Thomson in Scotland sent them through gold foil. Both saw <mark>diffraction patterns, exactly like a wave would make</mark>. The gaps between the metal's atoms acted as the slits.</p>
+    <p>Watch closely: each electron arrives at one spot, like a particle. The wave pattern only appears as more arrive.</p>
   `);
+  sim(ctx, 'diffraction');
+  key(ctx, 'An electron is neither a tiny ball nor a spread-out wave. <mark>It acts like a particle when it is detected and like a wave when it travels.</mark> Any full description of an electron in an atom has to include its wave behaviour.');
+  myth(ctx, {
+    wrong: 'Each electron splits up and goes through many gaps at once, and the pieces land in different places.',
+    right: 'Each electron is always detected whole, at a single point. The wave describes <em>where it is likely to land</em>. That is the idea lesson 2.7 builds on.',
+  });
 
+  section(ctx, 'Waves explain Bohr\'s rule');
+  add(ctx, `
+    <p>Remember that Bohr had to assume only some orbits are allowed. de Broglie's idea explains why. Wrap an electron wave around a circular orbit. <mark>It only joins up with itself if a whole number of wavelengths fits.</mark> Anything else cancels itself out.</p>
+  `);
+  sim(ctx, 'ringWave');
+  add(ctx, `
+    <p>Fitting $n$ wavelengths around a circle means $2\\pi r = n\\lambda$. Put in $\\lambda = h/m_ev$ and rearrange:</p>
+    $$m_e v r = n\\,\\frac{h}{2\\pi}$$
+    <p>That is exactly Bohr's rule. Quantization comes from waves fitting, the same reason a guitar string only plays certain notes. The orbit picture is still wrong, but this idea, that <mark>confined waves only come in certain patterns</mark>, carries straight on to lesson 2.7.</p>
+  `);
+  check(ctx, {
+    q: 'An electron and a proton move at the same speed. Which has the longer wavelength?',
+    options: [
+      { t: 'The proton, because it is bigger', why: 'Size doesn\'t appear in $\\lambda = h/mv$. Mass does, and more mass means a shorter wavelength.' },
+      { t: 'The electron, by about 1836 times', right: true, why: 'Same speed, but the electron is 1836 times lighter, so its wavelength is 1836 times longer.' },
+      { t: 'They are the same, because the speeds are the same', why: 'Wavelength depends on momentum, $mv$, not on speed alone.' },
+    ],
+  });
   spotlight(ctx, 'tem');
-  spotlight(ctx, 'photosynthesis');
 
-  check(ctx, 'A proton and an electron move at the same speed. Which has the longer de Broglie wavelength, and by roughly how much?', 'The electron. $\\lambda = h/mv$, so at equal speed the lighter particle has the longer wavelength. The proton is about 1836 times heavier, so the electron\'s wavelength is about 1836 times longer.');
-  check(ctx, 'What speed would an electron need for its de Broglie wavelength to equal 100 pm, about the size of an atom?', '$v = h/(m\\lambda) = (6.626 \\times 10^{-34})/[(9.109 \\times 10^{-31})(1.00 \\times 10^{-10})] = 7.27 \\times 10^{6}$ m s<sup>−1</sup>, about 2.4% of the speed of light.');
+  revisit(ctx, '2.5', 'Electrons fired at a thin crystal make rings, just like light through a tiny gap. Each one lands as a single dot, but together they build up a wave pattern. Electrons are waves as well as particles.');
+  void me;
 }

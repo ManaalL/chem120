@@ -33,12 +33,13 @@ export function render(ctx, arg) {
   const sliceAxes = h('div', { class: 'slice-axes', 'aria-hidden': 'true' });
   const probe = h('p', { class: 'slice-probe' }, 'Move over the slice to read values.');
   const sliceBody = h('div', {});
-  const slicePanel = h('section', { class: 'slice-panel' }, h('h3', {}, 'Cross-section'), sliceBody);
-  const graphsPanel = h('section', { class: 'graphs-panel' }, h('h3', {}, 'Radial plots for this orbital'));
+  const slicePanel = h('section', { class: 'panel-box' }, h('h3', {}, 'Cross-section'), sliceBody);
+  const graphsPanel = h('section', { class: 'panel-box' }, h('h3', {}, 'Radial graphs for this orbital'));
+  const side = h('aside', { class: 'lab-side', 'aria-label': 'Orbital controls' });
   main.append(
-    h('div', { class: 'lab-grid' },
+    h('div', { class: 'lab instrument' }, h('div', { class: 'lab-main' },
       vp, legend,
-      h('div', { class: 'lab-lower' }, slicePanel, graphsPanel)));
+      h('div', { class: 'lab-lower' }, slicePanel, graphsPanel)), side));
 
   const graphs = new RadialGraphs(graphsPanel);
   const view = new OrbitalView(vp, { orbital: startId, surface: true, cloud: false, autoRotate: false, nodes: false, aspect: 0.55 });
@@ -98,7 +99,21 @@ export function render(ctx, arg) {
     h('div', { class: 'btn-row' }, button('Reset view', () => view.resetView(), 'small'), button('Save image', saveImage, 'small')),
     h('p', { class: 'ctl-section' }, 'Values'), ro,
   );
-  ctx.panel(vp, controls, 'Orbital controls', 'Pick an orbital, then change how it is drawn.');
+  // Challenges: each ticks off when the lab reaches that state.
+  const CH = [
+    { do: 'Find an orbital with two radial nodes. Turn on Nodes to see them.', when: (o) => o.orbital === '3s' && o.nodes, then: '3s: two spheres, one inside the other, at 101 and 376 pm. n − l − 1 = 2.' },
+    { do: 'Find the orbital whose angular nodes are cones.', when: (o) => o.orbital === '3dz2' && o.nodes, then: '3d<sub>z²</sub>. Every other d orbital has two flat nodal planes.' },
+    { do: 'Pick 2p<sub>z</sub>, turn on Slice and choose the xy plane.', when: (o) => o.orbital === '2pz' && o.slice && o.sliceAxis === 'xy' && Math.abs(o.sliceOffset) < 0.2, then: 'The whole slice is empty: the xy plane is 2p<sub>z</sub>\'s nodal plane, so Ψ = 0 everywhere on it.' },
+    { do: 'Turn on "true relative size" and compare 1s with 3s.', when: (o) => o.trueScale && o.orbital === '3s', then: 'The most probable radius of 3s is about 13 times that of 1s. Orbitals grow quickly with n.' },
+  ];
+  const chDone = CH.map(() => false);
+  const chItems = CH.map((c) => h('li', {}, h('div', {}, h('div', { class: 'do', html: c.do }), h('div', { class: 'then', html: `<b>Done.</b> ${c.then}` }))));
+  side.append(
+    h('h1', { style: { font: '500 1.4rem/1.2 var(--serif)', margin: '0 0 6px' } }, 'Orbital lab'),
+    h('p', { class: 'lab-intro' }, 'Every orbital of hydrogen from 1s to 3d, computed from its wavefunction. Red is where Ψ is positive, blue where it is negative. The surface holds 90% of the probability.'),
+    h('p', { class: 'ctl-section', style: { borderTop: 0, paddingTop: 0 } }, 'Try this'), h('ol', { class: 'tasks' }, chItems),
+    controls);
+  view.on((info) => CH.forEach((c, i) => { if (!chDone[i] && c.when(info.options)) { chDone[i] = true; chItems[i].classList.add('done'); } }));
 
   function choose(id) {
     for (const [k, b] of Object.entries(orbButtons)) b.setAttribute('aria-pressed', String(k === id));

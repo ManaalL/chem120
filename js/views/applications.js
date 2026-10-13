@@ -81,11 +81,11 @@ const CALCS = {
 };
 
 export function render(ctx, arg) {
-  const main = h('article', { class: 'prose' });
+  const main = h('article', { class: 'page' });
   ctx.main.append(main);
   const matrix = `<div class="table-wrap"><table class="matrix"><thead><tr><th>Application</th><th>Module 2 idea behind it</th><th>Lessons</th></tr></thead><tbody>${APPLICATIONS.map((a) => `<tr><td><a href="#/applications/${a.id}">${a.title}</a></td><td>${a.idea}</td><td>${a.lessons.map((l) => `<a href="#/lesson/${l}">${l} ${LESSON_TITLES[l] || ''}</a>`).join('<br>')}</td></tr>`).join('')}</tbody></table></div>`;
   main.append(
-    h('header', { class: 'lesson-head' },
+    h('header', { class: 'page-head' },
       h('p', { class: 'kicker' }, 'Tools'),
       h('h1', {}, 'Applications in medicine and technology'),
       h('p', { class: 'goal' }, 'The physics of Module 2 sits under several tools used in hospitals and labs. Each entry links back to the lessons it depends on.')),
@@ -95,7 +95,7 @@ export function render(ctx, arg) {
       h('h2', {}, a.title),
       h('p', { class: 'app-meta' }, `Builds on lesson${a.lessons.length > 1 ? 's' : ''} ${a.lessons.join(' and ')}`),
       fromHTML(a.body));
-    if (CALCS[a.id]) card.append(h('div', { class: 'mini-calc' }, CALCS[a.id]()));
+    if (CALCS[a.id]) card.append(h('div', { class: 'mini-calc instrument' }, CALCS[a.id]()));
     main.append(card);
   }
 }
