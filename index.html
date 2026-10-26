@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/mhchem.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<link rel="stylesheet" href="assets/css/site.css">
+
+<title>CHEM 120 Interactive</title>
+<meta name="description" content="Interactive study site for CHEM 120 at Waterloo: chapters with 3D orbitals and molecules you can turn, endless chemistry practice with real answer checking, a formula and constants sheet, quiz prep and Test 2 prep.">
+</head>
+<body>
+<main id="app">
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <p class="mono" style="margin:0 0 10px">CHEM 120 · Waterloo · Fall 2026 · Modules 1 to 4</p>
+      <h1>Chemistry you can <em>turn around</em> and check.</h1>
+      <p class="lede">Every class is a short chapter: the key ideas in plain words, a worked example you step through, a 3D model you predict and then turn, and problems with new numbers every time. Answers are checked like a chemist would: units, sig figs, formulas with charges, configurations.</p>
+      <div class="btns">
+        <a class="btn" id="continueBtn" href="module-1.html">Start with Module 1</a>
+        <a class="btn ghost" href="midterm.html">Test 2 prep</a>
+      </div>
+      <div class="counts" id="counts"></div>
+    </div>
+    <figure class="plate hero-plate" id="plate"></figure>
+  </div>
+</section>
+
+<section class="sec" id="modules"><div class="wrap">
+  <h2>The modules</h2>
+  <p class="sub">One page per course-notes module. Inside each module, chapters are grouped by the Participation Challenge or test that first covers them. Your progress saves in this browser.</p>
+  <div class="mods" id="mods"></div>
+</div></section>
+
+<section class="sec" id="timeline"><div class="wrap">
+  <h2>Class timeline</h2>
+  <p class="sub">Every class so far, grouped by the PC or test that first covers it. Filled means you finished the chapter. Click one to open it.</p>
+  <div class="tl-wrap"><div class="tl" id="tl"></div><div class="tl-legend"><span><i class="f"></i>chapter done</span><span><i></i>not done yet</span><span><i class="x"></i>coming up</span><span><span class="pill new">New</span> this week</span></div></div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="qod">
+    <div><span class="pill">Question of the day</span><h3 style="margin-top:10px">One question, every day</h3><p class="sub" style="margin-bottom:0">Pulled from every chapter's exam questions. Get it wrong and you get a link to the chapter that covers it.</p><p class="small muted" id="qodmeta"></p></div>
+    <div id="qod"></div>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <h2>What's inside</h2>
+  <p class="sub">Predict, turn, check. Every answer box reads chemistry: 4.09e-19 J, 4.09 × 10⁻¹⁹ J and 4.09e-22 kJ all count, and a right value with the wrong sig figs gets flagged.</p>
+  <div class="how">
+    <div><span class="n">01</span><b>Chapters with 3D</b>One chapter per class, with course-notes page numbers. Orbitals from the real wavefunctions, molecules from VSEPR, lattices and particle views, each with a prediction first.</div>
+    <div><span class="n">02</span><b>Formula sheet</b>Every formula, constant and rule, searchable. Flashcards with spaced repetition, fill in the blank, a readiness score per module and a periodic table.</div>
+    <div><span class="n">03</span><b>Practice and prep</b>Endless problems by chapter and difficulty, quiz prep for each PC, and practice tests in the real Test 2 format with a study plan.</div>
+    <div><span class="n">04</span><b>Ev</b>The electron in the corner. Drag it between energy levels to see the photon it emits or absorbs, or tap it to look up a formula or ask what to study next.</div>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <h2>What changed</h2>
+  <div class="log"><ul id="log" style="margin:0;padding-left:18px"></ul><p class="small muted" id="built" style="margin:8px 0 0"></p></div>
+</div></section>
+</main>
+<script src="assets/js/core.js"></script>
+<script src="assets/js/chemcheck.js"></script>
+<script src="assets/js/chemlib.js"></script>
+<script src="assets/js/studydata.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/plot.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/exam.js"></script>
+<script src="assets/js/guide.js"></script>
+<script src="assets/js/home.js"></script>
+</body>
+</html>

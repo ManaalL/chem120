@@ -61,7 +61,22 @@ export const MOLS = {
   N2: { name: "Nitrogen", formula: "N2", center: "N", ligands: [["N", 3, 0, 1]], lp: 1 },
   C2H2: { name: "Acetylene", formula: "C2H2", atoms: [["C", 0, 0, { h: 1 }], ["C", 1, 0, { h: 1 }]], bonds: [[0, 1, 3]] },
   C3H8: { name: "Propane", formula: "C3H8", atoms: [["C", 0, 0, { h: 3 }], ["C", 0.87, 0.5, { h: 2 }], ["C", 1.73, 0, { h: 3 }]], bonds: [[0, 1, 1], [1, 2, 1]] },
-  CO: { name: "Carbon monoxide", formula: "CO", center: "C", ligands: [["O", 3, 1, 1]], lp: 1, fc: -1 }
+  CO: { name: "Carbon monoxide", formula: "CO", center: "C", ligands: [["O", 3, 1, 1]], lp: 1, fc: -1 },
+  /* ---- added for Module 4 chapters 4.2 to 4.6 (single-centre forms so resonance forms switch cleanly) ---- */
+  OCNr: { name: "Cyanate ion", formula: "OCN^-", center: "C", ligands: [["O", 1, -1, 3], ["N", 3, 0, 1]], lp: 0, charge: -1, notes: "Module 4, p. 4 and p. 13 (Example 4-7)", resonance: "OCNr" },
+  SCNm: { name: "Thiocyanate ion", formula: "SCN^-", center: "C", ligands: [["S", 2, 0, 2], ["N", 2, -1, 2]], lp: 0, charge: -1, outside: true, resonance: "SCNm" },
+  N2O: { name: "Dinitrogen monoxide", formula: "N2O", center: "N", ligands: [["N", 3, 0, 1], ["O", 1, -1, 3]], lp: 0, fc: 1, outside: true, resonance: "N2O" },
+  N3mR: { name: "Azide ion", formula: "N3^-", center: "N", ligands: [["N", 2, -1, 2], ["N", 2, -1, 2]], lp: 0, fc: 1, charge: -1, notes: "Module 4, p. 14 (Example 4-8)", resonance: "N3mR" },
+  CO3m: { name: "Carbonate ion", formula: "CO3^2-", center: "C", ligands: [["O", 2, 0, 2], ["O", 1, -1, 3], ["O", 1, -1, 3]], lp: 0, charge: -2, outside: true, resonance: "CO3m" },
+  HCOOm: { name: "Formate ion", formula: "HCOO^-", center: "C", ligands: [["H", 1], ["O", 2, 0, 2], ["O", 1, -1, 3]], lp: 0, charge: -1, outside: true, resonance: "HCOOm" },
+  SOCl2x: { name: "Thionyl chloride (S=O form)", formula: "SOCl2", center: "S", ligands: [["O", 2, 0, 2], ["Cl", 1, 0, 3], ["Cl", 1, 0, 3]], lp: 1, notes: "Module 4, p. 8 (Example 4-2)" },
+  SO2Cl2: { name: "Sulfuryl chloride", formula: "SO2Cl2", center: "S", ligands: [["O", 2, 0, 2], ["O", 2, 0, 2], ["Cl", 1, 0, 3], ["Cl", 1, 0, 3]], lp: 0, outside: true },
+  PCl3: { name: "Phosphorus trichloride", formula: "PCl3", center: "P", ligands: [["Cl", 1, 0, 3], ["Cl", 1, 0, 3], ["Cl", 1, 0, 3]], lp: 1, outside: true },
+  CH3Cl: { name: "Chloromethane", formula: "CH3Cl", center: "C", ligands: [["Cl", 1, 0, 3], ["H", 1], ["H", 1], ["H", 1]], lp: 0, outside: true },
+  CH2Cl2: { name: "Dichloromethane", formula: "CH2Cl2", center: "C", ligands: [["Cl", 1, 0, 3], ["H", 1], ["H", 1], ["Cl", 1, 0, 3]], lp: 0, outside: true },
+  CS2: { name: "Carbon disulfide", formula: "CS2", center: "C", ligands: [["S", 2, 0, 2], ["S", 2, 0, 2]], lp: 0, outside: true },
+  OCS: { name: "Carbonyl sulfide", formula: "OCS", center: "C", ligands: [["O", 2, 0, 2], ["S", 2, 0, 2]], lp: 0, outside: true },
+  OF2: { name: "Oxygen difluoride", formula: "OF2", center: "O", ligands: [["F", 1, 0, 3], ["F", 1, 0, 3]], lp: 2, outside: true }
 };
 
 /* resonance forms: for each form, bond orders (same bond order as `bonds` in the built molecule) and formal charges by atom index.
@@ -74,5 +89,12 @@ export const RESONANCE = {
   NO2m: { forms: [{ ord: [2, 1], fc: [0, 0, -1] }, { ord: [1, 2], fc: [0, -1, 0] }], equal: true, note: "Two equivalent forms; each N–O bond is $1\\tfrac{1}{2}$." },
   N3m: { forms: [{ ord: [2, 2], fc: [-1, 1, -1] }, { ord: [1, 3], fc: [-2, 1, 0] }, { ord: [3, 1], fc: [0, 1, -2] }], equal: false, major: [0], note: "The form with two double bonds keeps the formal charges smallest, so it is the major contributor." },
   CH3COOm: { forms: [{ ord: [1, 2, 1], fc: [0, 0, 0, -1] }, { ord: [1, 1, 2], fc: [0, 0, -1, 0] }], equal: true, note: "The two C–O bonds become equal; each O carries $-\\tfrac{1}{2}$." },
-  allyl: { forms: [{ ord: [2, 1], fc: [0, 0, 1] }, { ord: [1, 2], fc: [1, 0, 0] }], equal: true, note: "The + charge is shared by the two end carbons." }
+  allyl: { forms: [{ ord: [2, 1], fc: [0, 0, 1] }, { ord: [1, 2], fc: [1, 0, 0] }], equal: true, note: "The + charge is shared by the two end carbons." },
+  /* added for Module 4, chapter 4.3 (atom 0 is the centre; then the ligands in order) */
+  OCNr: { forms: [{ ord: [1, 3], fc: [0, -1, 0] }, { ord: [2, 2], fc: [0, 0, -1] }, { ord: [3, 1], fc: [0, 1, -2] }], equal: false, major: [0], note: "Not equivalent. Form 1 puts the −1 on O, the more electronegative atom (Module 4, p. 4), so it is the major contributor. Form 3 has a −2 and a +1, so it matters least." },
+  SCNm: { forms: [{ ord: [2, 2], fc: [0, 0, -1] }, { ord: [1, 3], fc: [0, -1, 0] }, { ord: [3, 1], fc: [0, 1, -2] }], equal: false, major: [0], note: "Not equivalent. N (3.0) is more electronegative than S (2.5) (Module 3, p. 15), so by the formal-charge rules the form with −1 on N is the major contributor." },
+  N2O: { forms: [{ ord: [3, 1], fc: [1, 0, -1] }, { ord: [2, 2], fc: [1, -1, 0] }, { ord: [1, 3], fc: [1, -2, 1] }], equal: false, major: [0], note: "Not equivalent. Form 1 keeps the charges at ±1 and puts the −1 on O, the most electronegative atom, so it is the major contributor." },
+  N3mR: { forms: [{ ord: [2, 2], fc: [1, -1, -1] }, { ord: [1, 3], fc: [1, -2, 0] }, { ord: [3, 1], fc: [1, 0, -2] }], equal: false, major: [0], note: "The form with two double bonds keeps every formal charge at ±1, so it is the major contributor. The other two have a −2." },
+  CO3m: { forms: [{ ord: [2, 1, 1], fc: [0, 0, -1, -1] }, { ord: [1, 2, 1], fc: [0, -1, 0, -1] }, { ord: [1, 1, 2], fc: [0, -1, -1, 0] }], equal: true, note: "Three equivalent forms. Each C–O bond is $1\\tfrac{1}{3}$ in the hybrid and each O carries $-\\tfrac{2}{3}$." },
+  HCOOm: { forms: [{ ord: [1, 2, 1], fc: [0, 0, 0, -1] }, { ord: [1, 1, 2], fc: [0, 0, -1, 0] }], equal: true, note: "Two equivalent forms. Both C–O bonds are $1\\tfrac{1}{2}$ and each O carries $-\\tfrac{1}{2}$." }
 };
