@@ -16,6 +16,30 @@ function pick(items,n){
   return M.shuffle(out);
 }
 
+
+/* turn a generated problem into a test-style multiple choice question: the right answer plus four tempting wrong ones */
+function genToMC(q){
+  const seed=q.seed!=null?q.seed:M.newSeed(); let made; try{ made=ENGINE.make(q.gid,seed,q.diff||2); }catch(e){ return null; }
+  const p=made.p, part=p.parts[0], a=part.answer, t=a.type||"num";
+  const stem=p.prompt+(p.parts.length>1?` ${part.label?"("+part.label.replace(/<[^>]+>/g,"")+")":""}`:"");
+  if(t==="mc"||t==="multi") return {...q,kind:"mc",seed,q:stem,opts:a.options.map((o,i)=>[o,t==="multi"?a.correct.includes(i):i===a.correct,""]),multi:t==="multi",keep:a.keep,fromGen:true};
+  if(t==="int"){ const v=+a.value; const c=[v,v+1,v-1,v+2,v*2,v-2].filter((x,i,arr)=>x>=0&&arr.indexOf(x)===i).slice(0,5); while(c.length<5) c.push(c[c.length-1]+3); return {...q,kind:"mc",seed,q:stem,opts:c.map(x=>[String(x),x===v,""]),fromGen:true,closest:false}; }
+  if(t!=="num") return null;
+  const v=+a.value, sf=a.sf||3; if(!isFinite(v)||v===0) return null;
+  const fmt=x=>`$${M.numTeX(x,sf)}${a.unit?"\\ "+MC.unitTeX(a.unit):""}$`;
+  const R=M.rng(seed^0x5bd1e995);
+  const tries=R.shuffle([10,0.1,1000,0.001,2,0.5,1.5,0.667,6.022e23,1/6.022e23,1e9,1e-9,3,1/3,4,0.25]);
+  const opts=[v]; const seen=new Set([fmt(v)]);
+  for(const f of tries){ if(opts.length>=5) break; const x=v*f; const k=fmt(x); if(seen.has(k)) continue; seen.add(k); opts.push(x); }
+  if(opts.length<5) return null;
+  return {...q,kind:"mc",seed,q:stem+(/closest/i.test(stem)?"":" Choose the closest answer."),opts:opts.map(x=>[fmt(x),x===v,""]),fromGen:true};
+}
+/* spread n picks over chapters */
+function spread(arr,n){ const by={}; M.shuffle(arr).forEach(q=>(by[q.lec]=by[q.lec]||[]).push(q)); const keys=M.shuffle(Object.keys(by)); const out=[]; while(out.length<n){ let add=false; for(const k of keys){ if(by[k].length&&out.length<n){ out.push(by[k].pop()); add=true; } } if(!add) break; } return out; }
+/* a test's question pool: each chapter's exam questions plus its generators asked as multiple choice */
+function testPool(chs){ const out=[]; chs.forEach(id=>{ const L=M.chap(id); if(!L) return; (L.exam||[]).forEach(q=>out.push({...q,kind:"mc",lec:id})); (L.gens||[]).forEach(g=>out.push({kind:"genmc",gid:g.id,lec:id,diff:2+(Math.random()<.4?1:0),id:g.id})); }); return out; }
+function selectTest(pool,n){ const mc=pool.filter(q=>q.kind==="mc"), gm=pool.filter(q=>q.kind==="genmc"); const k=Math.min(gm.length,Math.round(n*0.45)); return M.shuffle([...spread(gm,k),...spread(mc,n-k)]); }
+
 function mount(root,cfg){
   let qs=[], ans=[], flags=[], cur=0, timer=null, endAt=0, timed=!!cfg.timed;
   root.innerHTML=""; const wrap=el("div",{class:"ex"}); root.append(wrap);
@@ -43,7 +67,7 @@ function mount(root,cfg){
   }
   function begin(items,n){
     const chosen = cfg.select? cfg.select(items,n) : pick(items,n);
-    qs=chosen.map(q=>{ if(q.kind==="gen"){ const seed=q.seed!=null?q.seed:M.newSeed(); let made=null; try{ made=ENGINE.make(q.gid,seed,q.diff||2); }catch(e){ console.error(e); } return {...q,seed,made}; } return {...q,order:q.keep?q.opts.map((o,i)=>i):M.shuffle(q.opts.map((o,i)=>i))}; }).filter(q=>q.kind!=="gen"||q.made);
+    qs=chosen.map(q=>q.kind==="genmc"?genToMC(q):q).filter(Boolean).map(q=>{ if(q.kind==="gen"){ const seed=q.seed!=null?q.seed:M.newSeed(); let made=null; try{ made=ENGINE.make(q.gid,seed,q.diff||2); }catch(e){ console.error(e); } return {...q,seed,made}; } return {...q,order:q.keep?q.opts.map((o,i)=>i):M.shuffle(q.opts.map((o,i)=>i))}; }).filter(q=>q.kind!=="gen"||q.made);
     ans=qs.map(q=>q.kind==="gen"?q.made.p.parts.map(()=>""):(q.multi?[]:null)); flags=qs.map(()=>false); cur=0;
     if(timed && cfg.timeLimit){ endAt=Date.now()+cfg.timeLimit*60000; timer=setInterval(tick,1000); }
     show(); root.scrollIntoView({behavior:"smooth",block:"start"});
@@ -98,7 +122,7 @@ function mount(root,cfg){
     const topics={}; let right=0; const res=qs.map((q,i)=>grade(i));
     qs.forEach((q,i)=>{ const ok=res[i]; if(ok) right++; topics[q.lec]=topics[q.lec]||{right:0,total:0}; topics[q.lec].total++; if(ok) topics[q.lec].right++;
       if(q.kind==="gen"){ M.recordAttempt(q.gid,ok,true); if(!ok) M.logMistake({gid:q.gid,seed:q.seed,diff:q.diff||2,lec:q.lec,src:cfg.title}); }
-      else if(!ok) M.logMistake({mc:q.id,lec:q.lec,src:cfg.title}); });
+      else if(!ok){ if(q.fromGen) M.logMistake({gid:q.gid,seed:q.seed,diff:q.diff||2,lec:q.lec,src:cfg.title}); else M.logMistake({mc:q.id,lec:q.lec,src:cfg.title}); } });
     const pct=Math.round(right/qs.length*100);
     const db=M.db(); const prev=db.exam[cfg.key]||{best:0,attempts:0};
     db.exam[cfg.key]={last:pct,best:Math.max(prev.best||0,pct),attempts:(prev.attempts||0)+1,topics,when:Date.now(),n:qs.length}; M.save();
@@ -139,5 +163,5 @@ function mount(root,cfg){
   start();
   return {restart:start};
 }
-window.EXAM={mount, correctMC};
+window.EXAM={mount, correctMC, spread, testPool, selectTest, genToMC};
 })();

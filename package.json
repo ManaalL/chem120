@@ -1,0 +1,9 @@
+{
+  "name": "chem120",
+  "private": true,
+  "description": "CHEM 120 Interactive: study site for CHEM 120 at the University of Waterloo",
+  "scripts": {
+    "build": "node build/build.js",
+    "test": "node tests/checker.test.js && node tests/fuzz.js 300"
+  }
+}

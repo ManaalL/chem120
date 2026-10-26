@@ -1,6 +1,8 @@
+/* Tests for the chemistry answer checker (assets/js/chemcheck.js). Run: node tests/checker.test.js */
 const fs=require("fs"),vm=require("vm");const ctx={console};ctx.window=ctx;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(require("path").join(__dirname,"../assets/js/chemcheck.js"),"utf8"),ctx);const MC=ctx.MC;
-const T=(s,a,exp)=>{const r=MC.check(s,a);const got=r.ok?"ok":r.parseError?"parse":r.close?"close":"no";console.log((got===exp?"  ":"✗ ")+JSON.stringify(s).padEnd(28),got.padEnd(6),r.why||"")};
+let FAILS=0;
+const T=(s,a,exp)=>{const r=MC.check(s,a);const got=r.ok?"ok":r.parseError?"parse":r.close?"close":"no"; if(got!==exp){ FAILS++; console.log("✗ "+JSON.stringify(s).padEnd(28),"expected",exp,"got",got,r.why||""); } };
 T("4.09e-19 J",{type:"num",value:4.09e-19,unit:"J",sf:3},"ok");
 T("4.09 x 10^-19 J",{type:"num",value:4.09e-19,unit:"J",sf:3},"ok");
 T("4.09×10⁻¹⁹ J",{type:"num",value:4.09e-19,unit:"J",sf:3},"ok");
@@ -44,4 +46,4 @@ T("3,2,-3,1/2",{type:"qset",answer:[3,2,-1,0.5]},"no");
 T("3dx2-y2",{type:"orbital",answer:"3d_{x^2-y^2}"},"ok");
 T("2,1,1,2",{type:"list",answer:[2,1,1,2]},"ok");
 T("V-shaped",{type:"text",accept:["bent","v shaped"]},"ok");
-console.log(JSON.stringify(MC.preview("4.09 x 10^-19 kJ/mol","num")), JSON.stringify(MC.preview("[Ar] 4s2 3d10","config")));
+console.log(FAILS?`✗ ${FAILS} checker tests failed`:"✓ checker tests pass"); process.exit(FAILS?1:0);
