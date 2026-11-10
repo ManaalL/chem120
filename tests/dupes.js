@@ -16,6 +16,8 @@ const real=[];
 for(const f of ["assignments.md","tests.md"]){ const p=path.join(REAL,f); if(!fs.existsSync(p)){ console.log("missing "+p+" (set REAL_DIR)"); process.exit(2); }
   const txt=fs.readFileSync(p,"utf8"); const parts=txt.split(/\n## (?=[AT]\d+ Q\d+)/);
   parts.slice(1).forEach(s=>{ const id=s.split("\n")[0].trim(); let body=s.split(/\*\*(?:Format|Submitted|My answer|Maps to|Answer)/)[0]; body=body.replace(/^.*\n/,""); real.push({id,text:body}); }); }
+/* tests2.md (official Test 2 samples): one numbered line per question, "Ans" at the end */
+{ const p=path.join(REAL,"tests2.md"); if(fs.existsSync(p)){ let sec=""; fs.readFileSync(p,"utf8").split("\n").forEach(l=>{ const h=l.match(/^## (.*)/); if(h) sec=h[1].split(" ")[0]+(h[1].split(" ")[1]||""); const m=l.match(/^(\d+)\. (.*)/); if(m) real.push({id:`T2 ${sec} Q${m[1]}`,text:m[2].replace(/ Ans .*$/,"")}); }); } }
 const SUB={"₀":"0","₁":"1","₂":"2","₃":"3","₄":"4","₅":"5","₆":"6","₇":"7","₈":"8","₉":"9","⁰":"0","¹":"1","²":"2","³":"3","⁴":"4","⁵":"5","⁶":"6","⁷":"7","⁸":"8","⁹":"9","⁻":"-","⁺":"+","−":"-","×":"x"};
 const norm=s=>String(s).replace(/<[^>]+>/g," ").replace(/\\ce\{([^}]*)\}/g,"$1").replace(/\\(times|cdot)/g,"x").replace(/\\[a-zA-Z]+/g," ").replace(/[₀-₉⁰-⁹⁻⁺−×]/g,c=>SUB[c]||c).replace(/[{}$^_\\]/g,"").toLowerCase().replace(/[^a-z0-9.+\- ]+/g," ").replace(/\s+/g," ").trim();
 const nums=s=>new Set((norm(s).match(/\d+(\.\d+)?/g)||[]).filter(x=>x.length>1||+x>9));
@@ -40,6 +42,7 @@ for(const L of M.chapters){
     test(p.prompt+" "+opt,`${g.id} d${d} seed ${s}`); if(flags.length>200) break; }
 }
 (M.extras.review||[]).forEach(r=>test(r.q+" "+(r.opts||[]).map(o=>o[0]).join(" "),r.id));
+(M.extras.drills||[]).forEach(d=>{ for(let k=1;k<=N;k++){ let q=null; try{ q=d.gen(M.rng(k*7919+13)); }catch(e){ continue; } if(q) test(q.q+" "+q.opts.map(o=>o[0]).join(" "),`${d.id} seed ${k}`); if(flags.length>200) break; } });
 (M.extras.examples||[]).forEach(r=>test(r.q,r.id));
 if(process.env.SELFTEST){ const before=flags.length; test(real[9].text.replace(/6.0/,"6.0"),"selftest-exact"); test(real[9].text.replace("Nitrous oxide","Dinitrogen monoxide"),"selftest-edited"); console.log("self test flagged",flags.length-before,"of 2"); flags.length=before; }
 console.log(`${real.length} real questions, ${checked} site questions checked`);

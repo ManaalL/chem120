@@ -5,11 +5,13 @@
 window.C120 = window.C120 || {};
 C120.COURSE = {
   code:"CHEM 120", name:"Physical and Chemical Properties of Matter", term:"Fall 2026", school:"University of Waterloo",
-  /* the next test. Date from the course calendar. Time and coverage are assumed (Test 1 ran 8:30 to 9:15 for every section and covered everything up to it). */
-  test:{id:"T2", date:"2026-11-11", time:"08:30", end:"09:15", label:"Test 2", assumed:"Time and coverage are assumed from Test 1. Change the date and time on this page if yours differ.",
-    covers:"everything after Test 1: Module 2 from page 12, Module 3 and Module 4", format:"about 15 multiple choice questions, 1 mark each, five options, some select-all, 45 minutes, scientific calculator and the data sheet",
-    chapters:["M2C4","M2C5","M2C6","M2C7","M2C8","M3C1","M3C2","M3C3","M3C4","M3C5","M3C6","M4C1","M4C2","M4C3","M4C4","M4C5","M4C6","M4C7"],
-    alsoReview:["M2C1","M2C2","M2C3"]},
+  /* the next test. Format and coverage from the official Test 2 info page on LEARN. The time is your scheduled section (8:30 for the sample's Version A); change it on the prep page if yours differs. */
+  test:{id:"T2", date:"2026-11-11", time:"08:30", end:"09:15", label:"Test 2", assumed:"It runs in your scheduled class section. If your section is not at 8:30, change the time on this page.",
+    covers:"Module 2 (focus pp. 9-35), all of Module 3, Module 4 pp. 1-14", format:"17 multiple choice questions, 1 mark each, 45 minutes, a scientific calculator and the data sheet. Some may be select-all, graded correct minus incorrect",
+    split:{m2:6,m3:6,m4:5},
+    notTested:["Module 2, p. 11: Are You Wondering (reduced mass, how Bohr derived his energies)","Module 2, p. 21: Digging Deeper (the table of hydrogen wavefunctions)","Module 2, p. 31: Digging Deeper (why the RDF is r\u00b2R\u00b2)","Module 4 after p. 14: lattice energy, bond energies, VSEPR, polarity, line structures"],
+    chapters:["M2C3","M2C4","M2C5","M2C6","M2C7","M2C8","M3C1","M3C2","M3C3","M3C4","M3C5","M3C6","M4C1","M4C2","M4C3"],
+    alsoReview:["M2C1","M2C2"]},
   modules:[
     {id:"m1", n:1, title:"Essential Review and Green Chemistry Metrics", short:"Reactions, stoichiometry, green metrics", pages:31,
       chapters:["M1C1","M1C2","M1C3","M1C4","M1C5","M1C6","M1C7"],
@@ -34,8 +36,8 @@ C120.COURSE = {
     {id:"PC3", kind:"pc", n:3, date:"2026-10-21", time:"21:00", covers:"All of Module 2", chapters:["M2C4","M2C5","M2C6","M2C7","M2C8"]},
     {id:"PC4", kind:"pc", n:4, date:"2026-10-28", time:"21:00", covers:"All of Module 3", chapters:["M3C1","M3C2","M3C3","M3C4","M3C5","M3C6"]},
     {id:"PC5", kind:"pc", n:5, date:"2026-11-04", time:"21:00", covers:"Module 4, pages 1 to 14", chapters:["M4C1","M4C2","M4C3"]},
-    {id:"T2",  kind:"test", n:2, date:"2026-11-11", time:"08:30", covers:"Module 2 from page 12, Module 3 and Module 4 (assumed)", chapters:["M4C4","M4C5","M4C6","M4C7"], label:"Test 2 only"},
-    {id:"PC6", kind:"pc", n:6, date:"2026-11-18", time:"21:00", covers:"Module 5", chapters:[]},
+    {id:"T2",  kind:"test", n:2, date:"2026-11-11", time:"08:30", covers:"Module 2 (focus pp. 9-35), Module 3, Module 4 pp. 1-14. 17 multiple choice, 45 minutes", chapters:[]},
+    {id:"PC6", kind:"pc", n:6, date:"2026-11-18", time:"21:00", covers:"Module 4 from page 15 and Module 5 (assumed)", chapters:["M4C4","M4C5","M4C6","M4C7"]},
     {id:"PC7", kind:"pc", n:7, date:"2026-11-25", time:"21:00", covers:"Module 5 and 6", chapters:[]},
     {id:"PC8", kind:"pc", n:8, date:"2026-12-02", time:"21:00", covers:"Module 6", chapters:[]},
     {id:"FX",  kind:"final", n:0, date:"2026-12-10", time:"", covers:"The whole course. Exam date to be posted by the Registrar (Dec 10 or 11).", chapters:[]}

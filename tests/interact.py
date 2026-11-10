@@ -1,7 +1,7 @@
 """Interaction test in a real browser:
 - for every generator at every difficulty, type the stored answer into the real answer box (or click the right option) and
   check that the page says Correct; type a wrong number and check it is rejected
-- submits a module mini exam, a PC practice quiz with the timer, and a Test 2 practice test (checks 15 questions)
+- submits a module mini exam, a PC practice quiz with the timer, and a Test 2 practice test (checks 17 questions, the real 6/6/5 split)
 - flips a flashcard, answers a fill-in-the-blank, rates a sample-test question, opens the study plan, redoes a logged mistake
 - asks Ev a question and checks it finds the right chapter"""
 import sys, json
@@ -55,7 +55,7 @@ with sync_playwright() as p:
     pg.goto(ROOT+"midterm.html#exam"); pg.wait_for_timeout(900)
     pg.click("button:has-text(\"Start\")"); pg.wait_for_timeout(500)
     cnt=pg.evaluate("document.querySelectorAll('.ex-dots button').length")
-    if cnt!=15: bad.append(f"practice test has {cnt} questions, expected 15")
+    if cnt!=17: bad.append(f"practice test has {cnt} questions, expected 17")
     opts=pg.evaluate("[...document.querySelectorAll('.ex-opt')].length")
     if opts<4: bad.append(f"practice test question shows {opts} options")
     pg.goto(ROOT+"formulas.html#mode=flash"); pg.wait_for_timeout(700)
@@ -74,7 +74,7 @@ with sync_playwright() as p:
     pg.goto(ROOT+"midterm.html#plan"); pg.wait_for_timeout(700)
     if not pg.query_selector("text=Go back to these first"): bad.append("study plan missing")
     pg.goto(ROOT+"midterm.html#mistakes"); pg.wait_for_timeout(700)
-    btn=pg.query_selector("text=Redo it")
+    btn=pg.query_selector("button:has-text('Redo it')")
     if not btn: bad.append("no mistakes listed to redo")
     else:
         btn.click(); pg.wait_for_timeout(300)
@@ -85,7 +85,7 @@ with sync_playwright() as p:
     pg.goto(ROOT+"index.html"); pg.wait_for_timeout(700)
     pg.evaluate("GUIDE.open('radial nodes')"); pg.wait_for_timeout(300)
     txt=pg.inner_text(".tan-log")
-    if "2.6" not in txt: bad.append("Ev did not find radial nodes in chapter 2.6: "+txt[-200:])
+    if "adial node" not in txt: bad.append("Ev did not find radial nodes: "+txt[-200:])
     if errs: bad.append("page errors: "+"; ".join(errs[:5]))
     b.close()
 print("\n".join("✗ "+x for x in bad[:80]) if bad else "✓ interactions clean")

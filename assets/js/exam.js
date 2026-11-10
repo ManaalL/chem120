@@ -7,6 +7,10 @@
 const M=window.C120, el=M.el, rich=M.rich, esc=M.esc;
 
 function topicLabel(lid){ const L=M.chap(lid); return L?`${L.num} ${L.title.replace(/\$[^$]*\$/g,"")}`:lid; }
+/* marks for one MC answer, 0 to 1. Select-all is graded the way CHEM 120 grades it: correct picks minus incorrect picks, over the number of correct options, never below 0. */
+function creditSets(right,sel){ if(!right.length) return sel.length?0:1; const c=sel.filter(i=>right.includes(i)).length, w=sel.length-c; return Math.max(0,(c-w)/right.length); }
+function creditMC(q,a){ if(!q.multi) return correctMC(q,a)?1:0; const right=q.opts.map((o,i)=>o[1]?i:-1).filter(i=>i>=0); return creditSets(right,Array.isArray(a)?a:[]); }
+const fmtMarks=x=>Number.isInteger(x)?String(x):x.toFixed(2).replace(/0$/,"");
 function correctMC(q,a){ if(a==null) return false; const right=q.opts.map((o,i)=>o[1]?i:-1).filter(i=>i>=0); const sel=Array.isArray(a)?a:[a]; return sel.length===right.length && sel.every(i=>right.includes(i)); }
 function pick(items,n){
   if(n>=items.length) return M.shuffle(items);
@@ -37,7 +41,7 @@ function genToMC(q){
 /* spread n picks over chapters */
 function spread(arr,n){ const by={}; M.shuffle(arr).forEach(q=>(by[q.lec]=by[q.lec]||[]).push(q)); const keys=M.shuffle(Object.keys(by)); const out=[]; while(out.length<n){ let add=false; for(const k of keys){ if(by[k].length&&out.length<n){ out.push(by[k].pop()); add=true; } } if(!add) break; } return out; }
 /* a test's question pool: each chapter's exam questions plus its generators asked as multiple choice */
-function testPool(chs){ const out=[]; chs.forEach(id=>{ const L=M.chap(id); if(!L) return; (L.exam||[]).forEach(q=>out.push({...q,kind:"mc",lec:id})); (L.gens||[]).forEach(g=>out.push({kind:"genmc",gid:g.id,lec:id,diff:2+(Math.random()<.4?1:0),id:g.id})); }); return out; }
+function testPool(chs,tag){ const off=x=>tag&&Array.isArray(x.notOn)&&x.notOn.includes(tag); const out=[]; chs.forEach(id=>{ const L=M.chap(id); if(!L) return; (L.exam||[]).filter(q=>!off(q)).forEach(q=>out.push({...q,kind:"mc",lec:id})); (L.gens||[]).filter(g=>!off(g)).forEach(g=>out.push({kind:"genmc",gid:g.id,lec:id,diff:2+(Math.random()<.4?1:0),id:g.id})); }); return out; }
 function selectTest(pool,n){ const mc=pool.filter(q=>q.kind==="mc"), gm=pool.filter(q=>q.kind==="genmc"); const k=Math.min(gm.length,Math.round(n*0.45)); return M.shuffle([...spread(gm,k),...spread(mc,n-k)]); }
 
 function mount(root,cfg){
@@ -112,35 +116,35 @@ function mount(root,cfg){
   }
   function grade(i){
     const q=qs[i];
-    if(q.kind==="gen"){ const p=q.made.p; return p.parts.every((part,pi)=>{ const a=part.answer, t=a.type||"num"; if(t==="mc") return ans[i][pi]===String(a.correct); if(t==="multi") return String(ans[i][pi]||"")===a.correct.slice().sort().map(String).join(","); if(t==="firstline") return ans[i][pi]===String(a.wrong); const r=MC.check(ans[i][pi],a); return r.ok; }); }
-    return correctMC(q,ans[i]);
+    if(q.kind==="gen"){ const p=q.made.p; const cr=p.parts.map((part,pi)=>{ const a=part.answer, t=a.type||"num"; if(t==="mc") return ans[i][pi]===String(a.correct)?1:0; if(t==="multi") return creditSets(a.correct.map(Number),String(ans[i][pi]||"").split(",").filter(Boolean).map(Number)); if(t==="firstline") return ans[i][pi]===String(a.wrong)?1:0; const r=MC.check(ans[i][pi],a); return r.ok?1:0; }); return cr.reduce((x,y)=>x+y,0)/cr.length; }
+    return creditMC(q,ans[i]);
   }
   function submit(auto){
     const un=qs.filter((_,i)=>!answered(i)).length, fl=flags.filter(Boolean).length;
     if(!auto && (un||fl) && !confirm(`${un?`${un} unanswered`:""}${un&&fl?" and ":""}${fl?`${fl} flagged`:""}. Submit anyway?`)) return;
     stopTimer();
-    const topics={}; let right=0; const res=qs.map((q,i)=>grade(i));
-    qs.forEach((q,i)=>{ const ok=res[i]; if(ok) right++; topics[q.lec]=topics[q.lec]||{right:0,total:0}; topics[q.lec].total++; if(ok) topics[q.lec].right++;
+    const topics={}; let right=0; const cred=qs.map((q,i)=>grade(i)); const res=cred.map(x=>x>=1);
+    qs.forEach((q,i)=>{ const ok=res[i]; right+=cred[i]; topics[q.lec]=topics[q.lec]||{right:0,total:0}; topics[q.lec].total++; topics[q.lec].right+=cred[i];
       if(q.kind==="gen"){ M.recordAttempt(q.gid,ok,true); if(!ok) M.logMistake({gid:q.gid,seed:q.seed,diff:q.diff||2,lec:q.lec,src:cfg.title}); }
       else if(!ok){ if(q.fromGen) M.logMistake({gid:q.gid,seed:q.seed,diff:q.diff||2,lec:q.lec,src:cfg.title}); else M.logMistake({mc:q.id,lec:q.lec,src:cfg.title}); } });
     const pct=Math.round(right/qs.length*100);
     const db=M.db(); const prev=db.exam[cfg.key]||{best:0,attempts:0};
     db.exam[cfg.key]={last:pct,best:Math.max(prev.best||0,pct),attempts:(prev.attempts||0)+1,topics,when:Date.now(),n:qs.length}; M.save();
-    results(right,pct,topics,prev,res,auto);
+    results(right,pct,topics,prev,res,auto,cred);
   }
   function breakdown(topics){
     const c=el("div",{class:"card"}); c.append(el("h3",{},"By chapter"));
     Object.keys(topics).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).forEach(k=>{ const t=topics[k], f=t.right/t.total; const col=f>=.8?"#2a7648":f>=.6?"#d9a12b":"#c0482f";
-      c.append(el("div",{class:"acc",html:`<span>${esc(topicLabel(k))}</span><span class="bar"><i style="width:${Math.max(4,f*100)}%;background:${col}"></i></span><span class="n">${t.right}/${t.total}</span>`})); });
+      c.append(el("div",{class:"acc",html:`<span>${esc(topicLabel(k))}</span><span class="bar"><i style="width:${Math.max(4,f*100)}%;background:${col}"></i></span><span class="n">${fmtMarks(t.right)}/${t.total}</span>`})); });
     return c;
   }
-  function results(right,pct,topics,prev,res,auto){
+  function results(right,pct,topics,prev,res,auto,cred){
     wrap.innerHTML=""; const s=saved(); const c=el("div",{class:"card"});
     const msg=pct>=85?"Strong. You know this material.":pct>=70?"Solid, with a few gaps to close.":pct>=50?"Getting there. Work on the chapters below.":"This needs another pass. Start with the weakest chapter below.";
-    c.innerHTML=`<h2>Results${auto?" (time's up)":""}</h2><div class="ex-score"><div><div class="big">${right}/${qs.length}</div><div class="muted">correct (${pct}%)</div></div><div><div class="big" style="color:var(--head)">${s.best}%</div><div class="muted">${prev.attempts?(pct>(prev.best||0)?"new personal best":"your best"):"your first score"}</div></div></div><p>${msg}</p>`;
+    c.innerHTML=`<h2>Results${auto?" (time's up)":""}</h2><div class="ex-score"><div><div class="big">${fmtMarks(right)}/${qs.length}</div><div class="muted">marks (${pct}%)</div></div><div><div class="big" style="color:var(--head)">${s.best}%</div><div class="muted">${prev.attempts?(pct>(prev.best||0)?"new personal best":"your best"):"your first score"}</div></div></div><p>${msg}</p>`;
     const weak=Object.keys(topics).map(k=>({k,...topics[k],f:topics[k].right/topics[k].total})).filter(t=>t.f<.75).sort((a,b)=>a.f-b.f);
     if(weak.length){ const box=el("div",{class:"relearn"}); box.append(el("b",{},"Relearn these")); const ul=el("ul",{style:"margin:8px 0 0;padding-left:18px"});
-      weak.forEach(t=>{ const li=el("li",{html:`<b>${esc(topicLabel(t.k))}</b>: ${t.right} of ${t.total} right. `}); li.append(el("a",{href:M.chURL(t.k)},"Open the chapter")); ul.append(li); });
+      weak.forEach(t=>{ const li=el("li",{html:`<b>${esc(topicLabel(t.k))}</b>: ${fmtMarks(t.right)} of ${t.total} marks. `}); li.append(el("a",{href:M.chURL(t.k)},"Open the chapter")); ul.append(li); });
       box.append(ul); c.append(box); }
     else c.append(el("p",{style:"font-weight:600;color:var(--ok)"},"Nothing below 75% in any chapter."));
     const row=el("div",{class:"row",style:"margin-top:8px"});
@@ -150,18 +154,18 @@ function mount(root,cfg){
     row.append(el("button",{class:"btn ghost",type:"button",onclick:start},"Back to start"));
     c.append(row); wrap.append(c, breakdown(topics));
     const rv=el("div",{class:"card rev"}); rv.append(el("h3",{},"Every question, with the answer"));
-    qs.forEach((q,i)=>{ const ok=res[i], blank=!answered(i); const d=el("details");
+    qs.forEach((q,i)=>{ const ok=res[i], blank=!answered(i), part=!ok&&cred[i]>0; const d=el("details");
       let body="";
       if(q.kind==="gen"){ const p=q.made.p; body=`<p><b>Your answer:</b> ${p.parts.map((pt,pi)=>{ const a=ans[i][pi]; if(!a) return "(blank)"; const ty=pt.answer.type||"num"; if(ty==="mc") return rich(pt.answer.options[+a]); if(ty==="multi") return a.split(",").map(k=>rich(pt.answer.options[+k])).join("; "); if(ty==="firstline") return "line "+(+a+1); const pv=MC.preview(a,pt.answer.type); return pv.tex?M.tex(pv.tex):esc(a); }).join("; ")}</p>${p.answerTeX?`<p class="right"><b>Answer:</b> ${rich(p.answerTeX)}</p>`:""}<ol>${(p.steps||[]).map(s=>`<li>${rich(s)}</li>`).join("")}</ol>`;
-        d.innerHTML=`<summary><span class="mk ${blank?"skip":ok?"ok":"no"}">${blank?"–":ok?"✓":"✗"}</span><span>${rich(p.prompt)} <span class="pill">Ch ${M.chap(q.lec).num}</span></span></summary><div class="body">${body}</div>`; }
+        d.innerHTML=`<summary><span class="mk ${blank?"skip":ok?"ok":"no"}">${blank?"–":ok?"✓":part?fmtMarks(cred[i]):"✗"}</span><span>${rich(p.prompt)} <span class="pill">Ch ${M.chap(q.lec).num}</span></span></summary><div class="body">${body}</div>`; }
       else { const ri=q.opts.map((o,j)=>o[1]?j:-1).filter(j=>j>=0); const yours=q.multi?ans[i]:(ans[i]==null?[]:[ans[i]]);
-        body=`${yours.length&&!ok?`<p style="color:var(--bad)"><b>You chose:</b> ${yours.map(j=>rich(q.opts[j][0])).join("; ")}</p>`:""}<p style="color:var(--ok)"><b>Answer:</b> ${ri.map(j=>rich(q.opts[j][0])).join("; ")}</p><p>${rich(ri.map(j=>q.opts[j][2]).filter(Boolean).join(" "))}</p>${q.ref?`<p class="ref">${esc(M.refText(q.lec,q.ref))}</p>`:""}`;
-        d.innerHTML=`<summary><span class="mk ${blank?"skip":ok?"ok":"no"}">${blank?"–":ok?"✓":"✗"}</span><span>${rich(q.q)} <span class="pill">Ch ${M.chap(q.lec).num}</span></span></summary><div class="body">${body}</div>`; }
+        body=`${yours.length&&!ok?`<p style="color:var(--bad)"><b>You chose:</b> ${yours.map(j=>rich(q.opts[j][0])).join("; ")}${q.multi?` (${fmtMarks(cred[i])} of 1 mark: correct picks minus wrong picks)`:""}</p>`:""}<p style="color:var(--ok)"><b>Answer:</b> ${ri.map(j=>rich(q.opts[j][0])).join("; ")}</p><p>${rich(ri.map(j=>q.opts[j][2]).filter(Boolean).join(" "))}</p>${q.ref?`<p class="ref">${esc(M.refText(q.lec,q.ref))}</p>`:""}`;
+        d.innerHTML=`<summary><span class="mk ${blank?"skip":ok?"ok":"no"}">${blank?"–":ok?"✓":part?fmtMarks(cred[i]):"✗"}</span><span>${rich(q.q)} <span class="pill">Ch ${M.chap(q.lec).num}</span></span></summary><div class="body">${body}</div>`; }
       rv.append(d); });
     wrap.append(rv); root.scrollIntoView({behavior:"smooth",block:"start"});
   }
   start();
   return {restart:start};
 }
-window.EXAM={mount, correctMC, spread, testPool, selectTest, genToMC};
+window.EXAM={mount, correctMC, creditMC, creditSets, fmtMarks, spread, testPool, selectTest, genToMC};
 })();

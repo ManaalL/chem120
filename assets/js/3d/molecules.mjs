@@ -28,8 +28,8 @@ export const MOLS = {
   /* ---- more single-centre molecules from the notes ---- */
   H2CO: { name: "Formaldehyde", formula: "H2CO", center: "C", ligands: [["O", 2, 0, 2], ["H", 1], ["H", 1]], lp: 0, notes: "Module 4, p. 3" },
   SO3: { name: "Sulfur trioxide", formula: "SO3", center: "S", ligands: [["O", 2, 0, 2], ["O", 1, -1, 3], ["O", 1, -1, 3]], lp: 0, fc: 2, notes: "Module 4, p. 20 (Example 4-9)" },
-  NO3m: { name: "Nitrate ion", formula: "NO3^-", center: "N", ligands: [["O", 2, 0, 2], ["O", 1, -1, 3], ["O", 1, -1, 3]], lp: 0, fc: 1, charge: -1, notes: "Module 4, p. 4", resonance: "NO3m" },
-  SOCl2: { name: "Thionyl chloride", formula: "SOCl2", center: "S", ligands: [["O", 1, -1, 3], ["Cl", 1, 0, 3], ["Cl", 1, 0, 3]], lp: 1, fc: 1, notes: "Module 4, p. 4" },
+  NO3m: { name: "Nitrate ion", formula: "NO3^-", center: "N", ligands: [["O", 2, 0, 2], ["O", 1, -1, 3], ["O", 1, -1, 3]], lp: 0, fc: 1, charge: -1, notes: "Module 4, p. 8", resonance: "NO3m" },
+  SOCl2: { name: "Thionyl chloride", formula: "SOCl2", center: "S", ligands: [["O", 1, -1, 3], ["Cl", 1, 0, 3], ["Cl", 1, 0, 3]], lp: 1, fc: 1, notes: "Module 4, p. 8" },
   POCl3: { name: "Phosphoryl chloride", formula: "POCl3", center: "P", ligands: [["O", 1, -1, 3], ["Cl", 1, 0, 3], ["Cl", 1, 0, 3], ["Cl", 1, 0, 3]], lp: 0, fc: 1, notes: "Module 4, p. 20 (Example 4-9)" },
   HCl: { name: "Hydrogen chloride", formula: "HCl", center: "Cl", ligands: [["H", 1]], lp: 3, notes: "Module 4, p. 19" },
   Cl2: { name: "Chlorine", formula: "Cl2", center: "Cl", ligands: [["Cl", 1, 0, 3]], lp: 3, notes: "Module 4, p. 19" },
@@ -76,7 +76,8 @@ export const MOLS = {
   CH2Cl2: { name: "Dichloromethane", formula: "CH2Cl2", center: "C", ligands: [["Cl", 1, 0, 3], ["H", 1], ["H", 1], ["Cl", 1, 0, 3]], lp: 0, outside: true },
   CS2: { name: "Carbon disulfide", formula: "CS2", center: "C", ligands: [["S", 2, 0, 2], ["S", 2, 0, 2]], lp: 0, outside: true },
   OCS: { name: "Carbonyl sulfide", formula: "OCS", center: "C", ligands: [["O", 2, 0, 2], ["S", 2, 0, 2]], lp: 0, outside: true },
-  OF2: { name: "Oxygen difluoride", formula: "OF2", center: "O", ligands: [["F", 1, 0, 3], ["F", 1, 0, 3]], lp: 2, outside: true }
+  OF2: { name: "Oxygen difluoride", formula: "OF2", center: "O", ligands: [["F", 1, 0, 3], ["F", 1, 0, 3]], lp: 2, outside: true },
+  vinylacetylene: { name: "But-1-en-3-yne", formula: "C4H4", atoms: [["C", 0, 0, { h: 2 }], ["C", 0.87, 0.5, { h: 1 }], ["C", 1.73, 0], ["C", 2.6, -0.5, { h: 1 }]], bonds: [[0, 1, 2], [1, 2, 1], [2, 3, 3]], outside: true }
 };
 
 /* resonance forms: for each form, bond orders (same bond order as `bonds` in the built molecule) and formal charges by atom index.

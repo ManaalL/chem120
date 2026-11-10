@@ -21,9 +21,9 @@ CH.position=function(z){ /* period, group, block for the main table (lanthanides
   const P=[[1,2],[3,10],[11,18],[19,36],[37,54],[55,86],[87,118]]; let period=P.findIndex(([a,b])=>z>=a&&z<=b)+1;
   const start=P[period-1][0]; const k=z-start; let group, block;
   if(period===1){ group=z===1?1:18; block="s"; }
-  else if(period<=3){ group=k<2?k+1:k+10; block=k<2?"s":"p"; }
+  else if(period<=3){ group=k<2?k+1:k+11; block=k<2?"s":"p"; }
   else if(period<=5){ group=k+1; block=k<2?"s":k<12?"d":"p"; }
-  else { if(k<2){ group=k+1; block="s"; } else if(k<16){ group=null; block="f"; } else { group=k-13; block=group<=12?"d":"p"; } if(z===57||z===89){ group=3; block="d"; } }
+  else { if(k<2){ group=k+1; block="s"; } else if(k<17){ group=null; block="f"; } else { group=k-13; block=group<=12?"d":"p"; } }
   return {period, group, block};
 };
 /* ---------- electron configurations (Module 3, pp. 3-8) ---------- */
@@ -42,9 +42,10 @@ const NOBLE=[["He",2],["Ne",10],["Ar",18],["Kr",36],["Xe",54],["Rn",86]];
 CH.configString=function(occ,{short=false,tex=false}={}){
   const total=Object.values(occ).reduce((a,b)=>a+b,0);
   let keys=CH.ORDER.filter(k=>occ[k]); let core=null;
-  if(short){ for(const [g,zg] of NOBLE){ const co=CH.occupancy(zg); const inside=Object.keys(co).every(k=>occ[k]===co[k]); if(inside && zg<total) core=[g,zg,co]; } if(core) keys=keys.filter(k=>!(core[2][k]&&occ[k]===core[2][k])); }
+  if(short){ for(const [g,zg] of NOBLE){ const co=CH.occupancy(zg); const inside=Object.keys(co).every(k=>occ[k]===co[k]); if(inside && zg<=total) core=[g,zg,co]; } if(core) keys=keys.filter(k=>!(core[2][k]&&occ[k]===core[2][k])); }
   const body=keys.map(k=>tex?`${k}^{${occ[k]}}`:`${k}${occ[k]}`).join(tex?"\\,":" ");
   const c=core?(tex?`[\\mathrm{${core[0]}}]\\,`:`[${core[0]}] `):"";
+  if(!body&&core) return tex?`[\\mathrm{${core[0]}}]`:`[${core[0]}]`;
   return (c+body).trim()||(tex?"[\\mathrm{"+core[0]+"}]":"["+core[0]+"]");
 };
 CH.config=(z,charge=0,opt={})=>CH.configString(CH.ionOccupancy(z,charge),opt);

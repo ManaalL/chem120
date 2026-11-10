@@ -112,7 +112,7 @@ function panel(host, P, ctx, makeVisual) {
   const logAx = el("div", { class: "spec-axis" }); [100, 200, 500, 1000, 2000, 5000, 10000].filter((x) => x > lamMin && x < lamMax).forEach((x) => { const s = el("span", {}, x >= 1000 ? x / 1000 + " µm" : x + " nm"); s.style.left = fl(x) + "%"; logAx.append(s); });
   const list = el("div", { class: "small muted" });
   spec.append(head, el("div", { class: "spec-cap" }, absMode ? "visible part, 400 to 750 nm: dark lines on the rainbow (an absorption spectrum, p. 8)" : "visible part, 400 to 750 nm, as on p. 8 (nm)"), visLabs, visStrip, visAx,
-    el("div", { class: "spec-cap" }, "every line, log scale (UV and IR lines are drawn dashed grey)"), regLabs, logStrip, logAx, list);
+    el("div", { class: "spec-cap" }, absMode ? "every line, log scale" : "every line, log scale (UV and IR lines are drawn dashed grey)"), regLabs, logStrip, logAx, list);
   function drawSpec() {
     visStrip.querySelectorAll(".spec-line").forEach((x) => x.remove()); logStrip.querySelectorAll(".spec-line").forEach((x) => x.remove()); visLabs.innerHTML = "";
     const L = [...st.lines.values()].sort((a, b) => a.lam - b.lam);
@@ -185,14 +185,14 @@ function visual3D(P, ctx) {
     V.label("+", new THREE.Vector3(0, 0, 0.085), "nlab nuc");
     const eR = 0.036; const electron = new THREE.Mesh(new THREE.SphereGeometry(eR, 28, 18), eMat); V.add(electron);
     const eLab = V.label("e⁻", new THREE.Vector3(), "elab");
-    const scaleLab = V.label("", new THREE.Vector3(0, RMAX + 0.16, 0), "nlab");
+    const scaleNote = el("div", { class: "small muted bh-scale" }); left.append(scaleNote);
     const torus = (r, tube, mat) => new THREE.Mesh(new THREE.TorusGeometry(r, tube, 6, Math.max(48, Math.round(r * 150))), mat);
     const labAng = (n) => -0.6 * Math.PI + 0.15 * Math.PI * (n - 1);
     function buildOrbits() {
       orbits.children.slice().forEach((o) => { orbits.remove(o); o.geometry.dispose(); });
       orbLabs.forEach((l) => l.remove()); orbLabs.length = 0;
       for (let n = 1; n <= maxN; n++) { const r = Rw(n); orbits.add(torus(r, 0.0055, orbMat)); const a = labAng(n); orbLabs[n] = V.label(`n = ${n}`, new THREE.Vector3((r + 0.07) * Math.cos(a), (r + 0.07) * Math.sin(a), 0), "orb"); }
-      scaleLab.set(st.trueScale ? "true scale: r = n²a₀" : "orbits n ≥ 4 drawn closer together than to scale"); scaleLab.pos.set(0, RMAX + 0.18, 0);
+      scaleNote.innerHTML = st.trueScale || maxN <= 3 ? "True scale: every orbit is drawn at r = n²a₀." : "Orbits n = 1 to 3 are to scale (r = n²a₀); n ≥ 4 are drawn closer together than to scale so they fit.";
       setHi(st.n);
     }
     function setHi(n) { if (hi) { V.remove(hi); } hi = torus(Rw(n), 0.011, hiMat); V.add(hi); orbLabs.forEach((l, k) => l && l.el.classList.toggle("on", k === n)); }
@@ -224,13 +224,16 @@ function visual3D(P, ctx) {
       photon = { g, lab, reveal(f) { const k = Math.round(clamp(f, 0, 1) * segs); tube.geometry.setDrawRange(0, k * rad * 6 || 0); if (f >= 1) tube.geometry.setDrawRange(0, total); cone.visible = f >= 1; lab.visible = f >= 0.98; V.requestRender(); } };
       lastT = T; return photon;
     }
+    /* the electron's jump, drawn as a dashed line from the old orbit to the new one */
+    const jumpMat = new THREE.LineDashedMaterial({ color: V.pal.accent, dashSize: 0.035, gapSize: 0.025 });
+    function jumpLine(r0, r1) { if (!photon) return; const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([posAt(r0), posAt(r1)]), jumpMat.clone()); l.computeLineDistances(); photon.g.add(l); }
     let stop = null, endFn = null;
     function finish() { if (stop) { stop(); stop = null; } if (endFn) { const f = endFn; endFn = null; f(); } }
     const ease = (u) => u * u * (3 - 2 * u);
     function show(T, th) {
       finish(); if (th != null) theta = th;
       const r0 = Rw(T.ni), r1 = Rw(T.nf);
-      const ph = makePhoton(T, posAt(T.kind === "absorbed" ? r0 : r1)); setHi(T.nf); setGhost(0);
+      const ph = makePhoton(T, posAt(T.kind === "absorbed" ? r0 : r1)); setHi(T.nf); setGhost(0); jumpLine(r0, r1);
       const end = () => { setE(r1); ph.reveal(1); };
       if (reduce()) return end();
       setE(r0); ph.reveal(0); endFn = end; let t = 0; const D = 1.3;
@@ -240,8 +243,9 @@ function visual3D(P, ctx) {
         if (k >= 1) { stop = null; endFn = null; end(); return false; } return true; });
     }
     function place(n, th) { finish(); if (th != null) theta = th; setHi(n); setGhost(0); setE(Rw(n)); }
-    function setScale() { finish(); buildOrbits(); setE(Rw(st.n)); if (lastT) { const T = lastT; makePhoton(T, posAt(T.kind === "absorbed" ? Rw(T.ni) : Rw(T.nf))).reveal(1); } }
-    V.theme((p) => { orbMat.color.set(p.axis); hiMat.color.set(p.accent); ghostMat.color.set(p.accent); nucMat.color.set(p.pos); eMat.color.set(p.neg); if (lastT && !lastT.colour && photon) photon.g.traverse((o) => o.material && o.material.color.set(p.ink2)); }, false);
+    function setScale() { finish(); buildOrbits(); setE(Rw(st.n)); if (lastT) { const T = lastT; makePhoton(T, posAt(T.kind === "absorbed" ? Rw(T.ni) : Rw(T.nf))).reveal(1); jumpLine(Rw(T.ni), Rw(T.nf)); } }
+    V.theme((p) => { jumpMat.color.set(p.accent); orbMat.color.set(p.axis); hiMat.color.set(p.accent); ghostMat.color.set(p.accent); nucMat.color.set(p.pos); eMat.color.set(p.neg); if (lastT && !lastT.colour && photon) photon.g.traverse((o) => o.isMesh && o.material.color.set(p.ink2)); if (photon) photon.g.traverse((o) => o.isLine && o.material.color.set(p.accent)); }, false);
+    V.disposers.push(() => jumpMat.dispose());
 
     /* dragging the electron: capture-phase listener on the wrapper so the orbit controls never start */
     const cv = V.renderer.domElement, ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hitP = new THREE.Vector3(), tmp = new THREE.Vector3();
@@ -273,7 +277,7 @@ function visual3D(P, ctx) {
     V.wrap.addEventListener("keydown", onKey);
     V.disposers.push(() => { V.wrap.removeEventListener("pointerdown", onDown, true); cv.removeEventListener("pointermove", onMove); cv.removeEventListener("pointerup", onUp); cv.removeEventListener("pointercancel", onUp); V.wrap.removeEventListener("keydown", onKey); });
     buildOrbits();
-    return { V, show, place, setScale, clearPhoton, dispose() { finish(); V.dispose(); } };
+    return { V, show, place, setScale, clearPhoton, dispose() { finish(); V.dispose(); scaleNote.remove(); } };
   };
 }
 
@@ -281,7 +285,7 @@ function visual3D(P, ctx) {
 function visual2D() {
   return (left, api) => {
     const st = api.st, maxN = st.maxN, S = 300, c = S / 2, RM = 128; let theta = 0.72 * Math.PI, lastT = null;
-    const box = el("div", { class: "bh-2d" }); left.append(box);
+    const box = el("div", { class: "bh-2d v3d-fallback" }); left.append(box);
     const unit = () => RM / dispR(maxN, st.trueScale);
     function draw() {
       const R = (n) => dispR(n, st.trueScale) * unit();

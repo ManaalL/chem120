@@ -80,7 +80,7 @@ function openChapter(id,si){
   const left=el("div"), panel=el("div",{class:"panel"});
   if(hasFig){ stage.append(left,panel); } else stage.append(panel);
   view.append(stage);
-  panel.append(el("div",{class:"kicker"},{read:"Key idea",example:"Worked example",explore:"Explore in 3D",mcq:"Check yourself",try:"Your turn",formulas:"Formulas and rules",firstline:"Find the mistake"}[s.type]||""));
+  panel.append(el("div",{class:"kicker"},(s.type==="explore"&&!(L.figures[s.fig]||{}).model)?"Explore":({read:"Key idea",example:"Worked example",explore:"Explore in 3D",mcq:"Check yourself",try:"Your turn",formulas:"Formulas and rules",firstline:"Find the mistake"}[s.type]||"")));
   panel.append(el("h2",{rich:s.title||""}));
   if(si===0 && (L.flags||[]).length){ panel.append(flagsBox(L)); }
   const next=el("button",{class:"btn",type:"button",onclick:()=>{ if(si+1<L.steps.length) openChapter(id,si+1); else finish(L); }}, si+1<L.steps.length?"Continue":"Finish chapter");

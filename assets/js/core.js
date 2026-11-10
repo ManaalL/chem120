@@ -8,9 +8,11 @@
 const M = window.C120 = window.C120 || {};
 M.chapters = M.chapters || [];
 M.chapter = function(L){ M.chapters.push(L); };
-M.extras = M.extras || {review:[],examples:[],changelog:[]};
+M.extras = M.extras || {review:[],examples:[],changelog:[],official:[],drills:[]};
 M.addReview = list => { M.extras.review.push(...list); };
 M.addExamples = list => { M.extras.examples.push(...list); };
+M.addDrills = list => { (M.extras.drills=M.extras.drills||[]).push(...list); };
+M.addOfficial = set => { (M.extras.official=M.extras.official||[]).push(set); };
 
 /* ---------- storage ---------- */
 const STORE_KEY = "c120.v1";           // bump to c120.v2 and add a migration below when the shape changes
@@ -130,6 +132,7 @@ M.toSig = function(v, sf=3){
   const e=Math.floor(Math.log10(Math.abs(v)));
   const dp=sf-1-e;
   const r=Math.round(v*Math.pow(10,dp))/Math.pow(10,dp);
+  if(dp>20) return String(+v.toPrecision(sf));
   if(dp>0) return r.toFixed(Math.min(dp,20));
   return String(Math.round(r));
 };

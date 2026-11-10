@@ -131,3 +131,18 @@ Real quiz, assignment and test questions are never copied onto the site. They de
 
 ## Writing rules
 Plain and direct, grade 12 reading level. No em dashes. No filler or hype words (genuinely, straightforward, seamless, robust, delve, leverage, unlock, navigate, landscape, game-changing). Titles are declarative and scientific. Explain from first principles with a plain analogy before the technical detail. Rewrite the notes in your own words: never copy course-notes sentences, figures or example text. Follow the notes for every formula, constant and definition, and cite the page. Flag real errors in the notes with `flags`.
+
+
+## Test prep extras (data/review/)
+
+- `test2-samples.js`: fixed site sample tests. `C120.addReview([...])`, IDs `T2A.n`, `T2B.n`. Same option format as exam questions.
+- `official-t2.js`: the official sample papers from LEARN, stored as topic labels only (never the question text). `C120.addOfficial({id, title, sub, drills:[drill id per question], qs:[{n, lec, topic, ans:"B" or "BCD", why, multi?, check?}]})`. Her letters are saved under `prefs.test2.off`; ratings under `review["OFF.V1.3"]`.
+- `drills-t2.js`: one drill per question type. `C120.addDrills([{id:"D.slug", lec, title, ref, how (HTML), gen(R) -> {q, opts:[[text, correct, why]], multi?}}])`. Test with `node tests/drills.js 3000`. Progress (streak, best, right, total) is in `prefs.test2.drills`; 3 in a row counts as learned.
+
+## Leaving something out of a test
+
+Add `notOn:["T2"]` to an exam question, generator or formula that is only about material the test info page says is not tested. `EXAM.testPool(chapters, "T2")` skips tagged exam questions and generators. Say "Not tested on Test 2." in the step text too.
+
+## Test format
+
+`C120.COURSE.test` holds the next test: date, time, `format`, `covers`, `split` (questions per module, used by the practice test), `notTested` (shown on the prep page), and `chapters`. Select-all questions are marked correct picks minus wrong picks, floored at 0 (`EXAM.creditSets`).

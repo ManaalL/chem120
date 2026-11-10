@@ -266,7 +266,14 @@ function configCompare(a,b,form){
     if(a.total!==b.total) return {ok:false,why:`You placed ${a.total} electrons; this needs ${b.total}.`};
     return {ok:false,why:"Right number of electrons, but they are in the wrong subshells. Check the filling order (and, for ions, which electrons leave first)."};
   }
-  if(form==="short"){ const coreZ=b.core?NOBLE_Z[b.core]:0; if(!a.core) return {ok:false,close:true,why:`Right configuration. The question asks for the noble-gas shorthand: start with [${b.core||"..."}].`}; if(a.core!==b.core) return {ok:false,close:true,why:`Right configuration, but use the nearest noble-gas core, [${b.core}].`}; }
+  if(form==="short"){
+    /* the largest noble-gas core that fits inside this configuration (for Na+ that is [Ne]; for Ne itself [Ne] or [He] 2s2 2p6 both count) */
+    const fits=Object.keys(NOBLE_Z).filter(g=>{ const co=parseConfig(NOBLE[g]).occ; return NOBLE_Z[g]<=a.total && Object.keys(co).every(k=>a.occ[k]===co[k]); }).sort((x,y)=>NOBLE_Z[y]-NOBLE_Z[x]);
+    const best=fits[0]||null, ok=[best]; if(best && NOBLE_Z[best]===a.total && fits[1]) ok.push(fits[1]);
+    if(!best){ if(a.core) return {ok:false,close:true,why:"There is no noble-gas core inside this configuration; write it out in full."}; }
+    else if(!a.core) return {ok:false,close:true,why:`Right configuration. The question asks for the noble-gas shorthand: start with [${best}].`};
+    else if(!ok.includes(a.core)) return {ok:false,close:true,why:`Right configuration, but use the nearest noble-gas core, [${best}].`};
+  }
   if(form==="full" && a.core) return {ok:false,close:true,why:"Right configuration. The question asks for the full (complete) configuration, without a noble-gas core."};
   return {ok:true};
 }

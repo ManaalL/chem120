@@ -148,12 +148,15 @@ export class Viewer {
     this.camera.updateProjectionMatrix();
     this.requestRender();
   }
-  requestRender() { if (this.dead || this.raf || !this.visible || document.hidden) return; this.raf = requestAnimationFrame((t) => this.frame(t)); }
+  /* inside frame() the frame itself decides whether to continue, so a request made by an animator must not schedule a second loop */
+  requestRender() { if (this.dead || this.raf || this.inFrame || !this.visible || document.hidden) return; this.raf = requestAnimationFrame((t) => this.frame(t)); }
   frame(t) {
     this.raf = 0; if (this.dead) return;
+    this.inFrame = true;
     const now = t / 1000; const dt = Math.min(0.05, now - (this.last || now)); this.last = now;
     let more = false;
     for (const a of [...this.anims]) { let keep = false; try { keep = a(dt, now); } catch (e) { console.error(e); } if (keep) more = true; else this.anims.delete(a); }
+    this.inFrame = false; if (this.anims.size) more = true; /* an animator added during this frame */
     const moved = this.controls.update();
     this.renderer.render(this.scene, this.camera);
     this.drawLabels();

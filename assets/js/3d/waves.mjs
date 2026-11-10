@@ -219,7 +219,7 @@ export function mountRingWave(host, P = {}, ctx = {}) {
   V.add(new THREE.Mesh(new THREE.TorusGeometry(R, 0.007, 6, 160), ringMat));
   const nucMat = surfaceMaterial(V.pal.pos); const nuc = new THREE.Mesh(new THREE.SphereGeometry(0.05, 24, 16), nucMat); V.add(nuc);
   V.label("+", new THREE.Vector3(0, 0, 0.13), "nlab nuc");
-  V.label("orbit, radius <i>r</i>", new THREE.Vector3(-R * 0.62, -R * 0.62, -0.32), "nlab");
+  V.label("orbit, radius <i>r</i>", new THREE.Vector3(-R * 1.18, -R * 0.42, -0.06), "nlab");
   const waveMat = surfaceMaterial(V.pal.accent, { roughness: 0.45 });
   const ghostMat = new THREE.MeshBasicMaterial({ color: V.pal.ink2, transparent: true, opacity: 0.5, depthWrite: false });
   const fillMat = new THREE.MeshBasicMaterial({ color: V.pal.accent, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false });
@@ -283,7 +283,7 @@ const SG_TEXT = {
 };
 export function mountSternGerlach(host, P = {}, ctx = {}) {
   const st = { view: P.view === "observed" ? "observed" : "classical" };
-  const V = new Viewer(host, { label: "Stern-Gerlach experiment: a beam of hydrogen atoms passes a magnet and hits a screen", cam: [-0.75, -4.6, 1.75], target: [0.2, 0, -0.05], aspect: P.aspect || 0.56, minD: 2.5, maxD: 14, onInteract: ctx.onInteract });
+  const V = new Viewer(host, { label: "Stern-Gerlach experiment: a beam of hydrogen atoms passes a magnet and hits a screen", cam: [-3.0, -5.1, 1.65], target: [0.05, 0, -0.05], aspect: P.aspect || 0.56, minD: 2.5, maxD: 14, onInteract: ctx.onInteract });
   const pal = () => V.pal;
   const metal = surfaceMaterial(pal().axis, { roughness: 0.6 });
   const nMat = surfaceMaterial(pal().pos, { roughness: 0.5 }), sMat = surfaceMaterial(pal().neg, { roughness: 0.5 });
