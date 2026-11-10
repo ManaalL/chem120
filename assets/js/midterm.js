@@ -49,8 +49,12 @@ function chapterPicker(onChange){
 /* ---------- practice test ---------- */
 function exam(){
   const host=el("div"); view.append(host);
-  EXAM.mount(host,{key:"test2",title:"Practice Test 2",intro:"17 questions in the real split: 6 from Module 2, 6 from Module 3, 5 from Module 4 (pp. 1-14). Five options, one mark each, some select-all (graded correct minus incorrect), and numeric questions where you choose the closest answer. New questions every attempt. Nothing from the boxes that are not tested. Use the data sheet values only.",
-    items:()=>EXAM.testPool(CHS(),"T2"), fixedSize:17, allowTimer:true, timeLimit:45,
+  const mode=el("div",{class:"chips",style:"margin:0 0 10px"});
+  [["test","Test mode: answers at the end"],["study","Study mode: check as you go, hints, show answer"]].forEach(([k,t])=>mode.append(el("button",{class:"chip",type:"button","aria-pressed":String((prefs.ptMode||"test")===k),onclick:()=>{ prefs.ptMode=k; M.save(); go("exam"); }},t)));
+  view.insertBefore(mode,host);
+  const studyPT=prefs.ptMode==="study";
+  EXAM.mount(host,{key:studyPT?"test2-study":"test2",study:studyPT,title:studyPT?"Practice Test 2: study mode":"Practice Test 2",intro:"17 questions in the real split: 6 from Module 2, 6 from Module 3, 5 from Module 4 (pp. 1-14). Five options, one mark each, some select-all (graded correct minus incorrect), and numeric questions where you choose the closest answer. New questions every attempt. Nothing from the boxes that are not tested. Use the data sheet values only.",
+    items:()=>EXAM.testPool(CHS(),"T2"), fixedSize:17, allowTimer:!studyPT, timeLimit:45,
     picker:(rerender)=>chapterPicker(rerender), select:selectSplit});
 }
 
@@ -175,12 +179,16 @@ function samples(){
   sets.forEach(s=>{ const n=REV.filter(r=>r.set===s).length; bar.append(el("button",{class:"chip",type:"button","aria-pressed":String(s===prefs.set),onclick:()=>{ prefs.set=s; M.save(); go("samples"); }},`${label(s)} (${n})`)); });
   let showAll=false; const tg=el("button",{class:"sbtn",type:"button"},"Show all answers");
   const timed=el("button",{class:"sbtn",type:"button"},"Take it as a timed test");
-  intro.append(bar,el("div",{class:"row"},tg,timed)); view.append(intro);
+  const studyB=el("button",{class:"btn sm",type:"button"},"Study mode: check as you go, with hints");
+  intro.append(bar,el("div",{class:"row"},studyB,timed,tg),el("p",{class:"muted small",style:"margin:6px 0 0"},"Study mode lets you check each answer the moment you pick it, open a hint if you're stuck, or show the answer with the reason for every option. Site sample test 1 has a hand-written hint on every question.")); view.append(intro);
   const list=el("div"); view.append(list);
   const draw=()=>{ list.innerHTML=""; REV.filter(r=>r.set===prefs.set).forEach((r,i)=>{ list.append(el("p",{class:"kicker",style:"margin:14px 0 4px"},`Question ${i+1}`), ENGINE.reviewCard(r,{showAll})); }); };
   tg.onclick=()=>{ showAll=!showAll; tg.textContent=showAll?"Hide all answers":"Show all answers"; draw(); };
   timed.onclick=()=>{ ENGINE.cleanup(view); view.innerHTML=""; const host=el("div"); view.append(host); const items=REV.filter(r=>r.set===prefs.set).map(r=>({...r,kind:"mc",keep:true}));
     EXAM.mount(host,{key:"sample-"+prefs.set,title:label(prefs.set),intro:"The fixed version, in order, with the 45-minute timer if you want it.",items,fixedSize:items.length,allowTimer:true,timeLimit:45,select:p=>p}); };
+  studyB.onclick=()=>{ ENGINE.cleanup(view); view.innerHTML=""; const host=el("div"); view.append(host); const items=REV.filter(r=>r.set===prefs.set).map(r=>({...r,kind:"mc",keep:true}));
+    view.prepend(el("button",{class:"sbtn",type:"button",style:"margin:4px 0 10px",onclick:()=>go("samples")},"← Back to the sample tests"));
+    EXAM.mount(host,{key:"study-"+prefs.set,title:label(prefs.set)+": study mode",intro:"No timer. Pick an answer, then press Check my answer to see right away if it's right and why. Stuck? Open the hint. Really lost? Show the answer. Your score counts your first check on each question, and 0 for any question where you looked at the answer first.",items,fixedSize:items.length,study:true,select:p=>p}); };
   draw();
 }
 

@@ -45,7 +45,7 @@ function testPool(chs,tag){ const off=x=>tag&&Array.isArray(x.notOn)&&x.notOn.in
 function selectTest(pool,n){ const mc=pool.filter(q=>q.kind==="mc"), gm=pool.filter(q=>q.kind==="genmc"); const k=Math.min(gm.length,Math.round(n*0.45)); return M.shuffle([...spread(gm,k),...spread(mc,n-k)]); }
 
 function mount(root,cfg){
-  let qs=[], ans=[], flags=[], cur=0, timer=null, endAt=0, timed=!!cfg.timed;
+  let qs=[], ans=[], flags=[], cur=0, timer=null, endAt=0, timed=!!cfg.timed, study=!!cfg.study, sst=[];
   root.innerHTML=""; const wrap=el("div",{class:"ex"}); root.append(wrap);
   const saved=()=>M.db().exam[cfg.key];
   function pool(){ return typeof cfg.items==="function"?cfg.items():cfg.items; }
@@ -54,7 +54,7 @@ function mount(root,cfg){
     const s=saved(); const c=el("div",{class:"card"});
     const items=pool();
     c.innerHTML=`<h2>${esc(cfg.title)}</h2>${cfg.intro?`<p>${rich(cfg.intro)}</p>`:""}
-      <p class="muted">Like the real thing: no hints or feedback until you submit. You can skip, flag questions to come back to, and change answers. Afterwards you get a breakdown by chapter and a list of what to relearn.</p>
+      ${cfg.study?`<p class="muted">Study mode: check each answer as you go, open a hint, or show the answer. You still get a breakdown by chapter at the end.</p>`:`<p class="muted">Like the real thing: no hints or feedback until you submit. You can skip, flag questions to come back to, and change answers. Afterwards you get a breakdown by chapter and a list of what to relearn.</p>`}
       ${s?`<p><b>Last attempt:</b> ${s.last}% &nbsp; <b>Best:</b> ${s.best}% &nbsp; <span class="muted">(${s.attempts} attempt${s.attempts>1?"s":""})</span></p>`:""}`;
     if(cfg.picker) c.append(cfg.picker(()=>start()));
     if(cfg.allowTimer){
@@ -72,8 +72,8 @@ function mount(root,cfg){
   function begin(items,n){
     const chosen = cfg.select? cfg.select(items,n) : pick(items,n);
     qs=chosen.map(q=>q.kind==="genmc"?genToMC(q):q).filter(Boolean).map(q=>{ if(q.kind==="gen"){ const seed=q.seed!=null?q.seed:M.newSeed(); let made=null; try{ made=ENGINE.make(q.gid,seed,q.diff||2); }catch(e){ console.error(e); } return {...q,seed,made}; } return {...q,order:q.keep?q.opts.map((o,i)=>i):M.shuffle(q.opts.map((o,i)=>i))}; }).filter(q=>q.kind!=="gen"||q.made);
-    ans=qs.map(q=>q.kind==="gen"?q.made.p.parts.map(()=>""):(q.multi?[]:null)); flags=qs.map(()=>false); cur=0;
-    if(timed && cfg.timeLimit){ endAt=Date.now()+cfg.timeLimit*60000; timer=setInterval(tick,1000); }
+    ans=qs.map(q=>q.kind==="gen"?q.made.p.parts.map(()=>""):(q.multi?[]:null)); flags=qs.map(()=>false); cur=0; sst=qs.map(()=>({checked:null,first:null,hint:false,shown:false}));
+    if(timed && cfg.timeLimit && !study){ endAt=Date.now()+cfg.timeLimit*60000; timer=setInterval(tick,1000); }
     show(); root.scrollIntoView({behavior:"smooth",block:"start"});
   }
   function stopTimer(){ if(timer){ clearInterval(timer); timer=null; } }
@@ -98,9 +98,11 @@ function mount(root,cfg){
       c.append(el("div",{class:"ex-q",rich:q.q}));
       if(q.multi) c.append(el("p",{class:"muted small"},"Select all that apply."));
       q.order.forEach((oi,k)=>{ const o=q.opts[oi]; const sel=q.multi?ans[cur].includes(oi):ans[cur]===oi;
-        const b=el("button",{class:"ex-opt"+(sel?" sel":""),type:"button"},el("span",{class:"l"},"ABCDEF"[k]),el("span",{rich:o[0]}));
+        const S=sst[cur]||{}; const mark=study&&(S.shown||(S.checked&&S.checked.includes(oi)))?(o[1]?" right":(S.checked&&S.checked.includes(oi)?" wrong":"")):"";
+        const b=el("button",{class:"ex-opt"+(sel?" sel":"")+mark,type:"button"},el("span",{class:"l"},"ABCDEF"[k]),el("span",{rich:o[0]}));
         b.onclick=()=>{ if(q.multi){ const a=ans[cur]; const j=a.indexOf(oi); if(j>=0) a.splice(j,1); else a.push(oi); } else ans[cur]= ans[cur]===oi?null:oi; show(); };
         c.append(b); });
+      if(study) c.append(studyBox(q,cur));
     }
     const fl=el("button",{class:"sbtn",type:"button",onclick:()=>{ flags[cur]=!flags[cur]; show(); }}, flags[cur]?"Flagged":"Flag to come back");
     const nav=el("div",{class:"row",style:"justify-content:space-between;margin-top:12px"});
@@ -114,14 +116,38 @@ function mount(root,cfg){
     dots();
     wrap.append(c); if(timer) tick();
   }
+  /* study mode: check as you go, a hint, or the answer */
+  function hintFor(q){
+    if(q.hint) return `<p>${rich(q.hint)}</p>`;
+    const L=M.chap(q.lec); const d=(M.extras.drills||[]).find(x=>x.lec===q.lec);
+    return `${d?`<div class="how">${rich(d.how)}</div>`:""}${L?`<p class="small muted">From chapter ${L.num}, ${esc(L.title.replace(/\$[^$]*\$/g,""))}${q.ref||q.page?` (${esc(q.page||M.refText(q.lec,q.ref))})`:""}.</p>`:""}`;
+  }
+  function studyBox(q,i){
+    const S=sst[i]; const box=el("div",{class:"studybox"});
+    const row=el("div",{class:"row",style:"gap:6px;margin-top:10px"});
+    const chosen=()=>q.multi?ans[i].slice():(ans[i]==null?[]:[ans[i]]);
+    row.append(el("button",{class:"btn sm",type:"button",disabled:answered(i)?null:"disabled",onclick:()=>{ S.checked=chosen(); if(S.first==null&&!S.shown) S.first=creditMC(q,ans[i]); show(); }},"Check my answer"));
+    row.append(el("button",{class:"sbtn",type:"button",onclick:()=>{ S.hint=!S.hint; show(); }},S.hint?"Hide hint":"Hint"));
+    row.append(el("button",{class:"sbtn",type:"button",onclick:()=>{ if(S.first==null) S.first=0; S.shown=true; show(); }},"Show the answer"));
+    box.append(row);
+    if(S.hint) box.append(el("div",{class:"fb hint",html:`<b>Hint.</b> ${hintFor(q)}`}));
+    if(S.checked&&!S.shown){ const c=creditSets(q.opts.map((o,j)=>o[1]?j:-1).filter(j=>j>=0),S.checked);
+      const why=S.checked.map(j=>q.opts[j][2]?`<li>${rich(q.opts[j][0])}: ${rich(q.opts[j][2])}</li>`:"").join("");
+      box.append(el("div",{class:"fb "+(c>=1?"ok":"bad"),html:`<b>${c>=1?"Right.":c>0?`Partly right (${fmtMarks(c)} of 1 mark).`:"Not quite."}</b> ${c>=1?"":"Change your answer and check again, or open the hint."}${why?`<ul>${why}</ul>`:""}`})); }
+    if(S.shown){ const ri=q.opts.map((o,j)=>o[1]?j:-1).filter(j=>j>=0);
+      box.append(el("div",{class:"fb ok",html:`<b>Answer:</b> ${ri.map(j=>rich(q.opts[j][0])).join("; ")||"none of them"}<ul>${q.opts.map(o=>o[2]?`<li>${rich(o[0])}: ${rich(o[2])}</li>`:"").join("")}</ul>`})); }
+    if(S.first!=null) box.append(el("p",{class:"muted small",style:"margin:6px 0 0"},S.shown&&S.first===0?"This one counts as 0 in your score because you looked at the answer first.":`Counted in your score: your first check (${fmtMarks(S.first)} of 1).`));
+    return box;
+  }
   function grade(i){
+    if(study && sst[i] && sst[i].first!=null) return sst[i].first;
     const q=qs[i];
     if(q.kind==="gen"){ const p=q.made.p; const cr=p.parts.map((part,pi)=>{ const a=part.answer, t=a.type||"num"; if(t==="mc") return ans[i][pi]===String(a.correct)?1:0; if(t==="multi") return creditSets(a.correct.map(Number),String(ans[i][pi]||"").split(",").filter(Boolean).map(Number)); if(t==="firstline") return ans[i][pi]===String(a.wrong)?1:0; const r=MC.check(ans[i][pi],a); return r.ok?1:0; }); return cr.reduce((x,y)=>x+y,0)/cr.length; }
     return creditMC(q,ans[i]);
   }
   function submit(auto){
     const un=qs.filter((_,i)=>!answered(i)).length, fl=flags.filter(Boolean).length;
-    if(!auto && (un||fl) && !confirm(`${un?`${un} unanswered`:""}${un&&fl?" and ":""}${fl?`${fl} flagged`:""}. Submit anyway?`)) return;
+    if(!auto && !study && (un||fl) && !confirm(`${un?`${un} unanswered`:""}${un&&fl?" and ":""}${fl?`${fl} flagged`:""}. Submit anyway?`)) return;
     stopTimer();
     const topics={}; let right=0; const cred=qs.map((q,i)=>grade(i)); const res=cred.map(x=>x>=1);
     qs.forEach((q,i)=>{ const ok=res[i]; right+=cred[i]; topics[q.lec]=topics[q.lec]||{right:0,total:0}; topics[q.lec].total++; topics[q.lec].right+=cred[i];
