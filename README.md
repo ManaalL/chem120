@@ -1,58 +1,38 @@
-# CHEM 120/121 Module 2: Quantum Theory and the Hydrogen Atom
+# CHEM 120 Interactive
 
-An interactive study site for Module 2 of CHEM 120/121 at the University of Waterloo. It covers all ten lessons, from quantization through spin, with a 3D orbital lab, experiment simulations, a practice problem generator and links to real uses in medicine and technology.
+An interactive study site for CHEM 120 at the University of Waterloo, Fall 2026.
 
-Every figure is computed live in the browser from the equations and constants in the module notes. Nothing is a pre-rendered image.
+Manaal Lakhani, Honours Sciences @ UWaterloo, built with help from Claude.
 
-## What's in it
+## What's here
 
-- **Lessons 2.1 to 2.10**, each built in short parts. Every lesson opens with a prediction to commit to and comes back to it at the end. Key phrases light up as you scroll and the main ideas collect into a Notes drawer. Each part is followed by something to do: a guided simulation with auto-checked "Try this" tasks, a step-by-step worked example followed by a similar problem with hints, a draw-your-guess graph, a sorting or matching task, or a quick check with an explanation for every option. Common misconceptions are named and corrected. Dotted words show a definition when tapped.
-- **Review**: recall cards from every lesson on a spaced schedule (Leitner boxes), plus mixed practice problems with worked solutions.
-- **Orbital lab**: all 14 hydrogen orbitals from 1s to 3d as boundary surfaces, point clouds, slice planes and node surfaces, linked to plots of R, R² and r²R², with challenges.
-- **Experiments**: all 16 guided simulations in one place.
-- **Applications**: MRI and NMR, cryo-electron microscopy, photodynamic therapy, pulse oximetry, GFP fluorescence and photosynthesis, each with a small calculator.
-- **Reference sheet**: all formulas and constants.
+- **Modules** (`module-1.html` to `module-4.html`): one page per course-notes module. Chapters follow the classes and are grouped by the Participation Challenge or test that first covers them. Each chapter has the key ideas, a worked example you step through, 3D models you predict and then turn, and generated practice problems. Each module also has Explore 3D, Practice, Mini exam and Glossary tabs.
+- **3D models**: hydrogen orbitals computed from the real wavefunctions (surface, point cloud, slice, nodes, phase, linked radial plot), molecules from VSEPR (lone pairs, electron vs molecular geometry, formal charges, resonance, dipoles, angle measuring, build your own), the Bohr atom, light waves, de Broglie waves, Stern-Gerlach, a rock-salt lattice, shielding shells, the Aufbau filler, a periodic trend landscape, and particle views for Module 1. Each one loads only when it scrolls into view and has a 2D fallback without WebGL.
+- **Formula sheet** (`formulas.html`): every formula, constant and rule with its module and page. Reference, Leitner flashcards, fill in the blank, readiness per module, and a periodic table with configurations and the notes' electronegativity and electron affinity values.
+- **Practice gym** (`gym.html`): endless problems from any chapters, easy to hard, with accuracy by topic.
+- **Quiz prep** (`quiz.html`, `quiz-pc1.html` ...): practice in each Participation Challenge's or test's format, with a timer.
+- **Test 2 prep** (`midterm.html`): practice tests in the real format, two fixed sample tests, a worked parallel of every course-notes example, a mistake log and a study plan with a countdown.
+- **Ev**: the electron in the corner. Drag it between energy levels to see the photon, or tap it to search the course material.
 
-## Running it
+Progress is saved in your browser only.
 
-It is a static site with no build step. Serve the folder with any web server:
+## How it's built
 
-```
-python3 -m http.server 8080
-```
-
-then open http://localhost:8080. (Opening `index.html` straight from disk will not work, because browsers block ES modules on `file://` URLs.)
-
-All libraries are stored in `vendor/`, so the site works offline and does not depend on outside CDNs.
-
-## Tests
-
-The physics and wavefunction code is checked against known results and the worked values in the module notes:
+Plain HTML, CSS and JavaScript with no framework. Math and chemistry are rendered with KaTeX and mhchem; 3D uses Three.js r170. All libraries load from cdnjs or jsDelivr with pinned versions. Each chapter is one file in `data/` (for example `data/M2C6.js`). `build/build.js` validates every data file and writes `assets/js/studydata.js` plus the module and quiz pages. See [docs/DATA.md](docs/DATA.md) for the format and [docs/UPDATING.md](docs/UPDATING.md) for adding a chapter.
 
 ```
-npm test
+node build/build.js                 # validate and build
+node tests/checker.test.js          # the chemistry answer checker
+node tests/fuzz.js 300              # every generator at 3 difficulties x 300 seeds, every answer checked
+python3 -m http.server 8123 &       # the browser tests need a local server
+python3 tests/walk.py               # every chapter step, laptop and phone, light and dark, 3D renders and frees memory
+python3 tests/models.py             # every 3D model with WebGL and with its 2D fallback
+python3 tests/interact.py           # answers typed into the real pages, exams, flashcards, mistake log, Ev
+python3 tests/site.py               # every page and tab
 ```
 
-Tests cover normalization of every radial and angular factor, node counts and positions, most probable radii, the 90% boundary surface of 1s, the Balmer line wavelengths, photoelectric and de Broglie examples, the general radial function for n up to 6, and every practice problem generator.
+## Sources
 
-## How it is built
+Formulas, constants, rules and page numbers follow the Fall 2026 CHEM 120/121 course notes (Modules 1 to 4) and the CHEM 120/121 data sheet. Explanations, figures, examples and problems are written for this site; the course notes' text and figures are not reproduced. Values the notes don't print (VSEPR bond angles, atomic radii, first ionization energies) are standard reference values and are labelled that way. Real assignment and test questions are not reproduced; `tests/dupes.js` checks that nothing on the site comes out identical to them.
 
-| Path | What it does |
-| --- | --- |
-| `js/core/physics.js` | Constants and formulas (photon energy, Bohr levels, photoelectric effect, de Broglie, uncertainty) |
-| `js/core/hydrogen.js` | Hydrogen wavefunctions, node finding, radial distribution peaks, isosurface thresholds, |Ψ|² sampling |
-| `js/widgets/orbital-engine.js` | Three.js orbital renderer: marching-cubes surfaces split by phase, point clouds, slice planes, nodes |
-| `js/widgets/*.js` | One file per simulation; each reports its state so tasks can tick off |
-| `js/learn/*.js` | Learning components: predictions, key ideas and notes, worked examples, draw-your-guess, sort and match, flashcards and the spaced review deck |
-| `js/content/*.js` | Simulation guides and tasks, recall cards, glossary, applications |
-| `js/lessons/l2-*.js` | Lesson text and the figures each lesson uses |
-| `js/content/applications.js` | Application write-ups shared by lessons and the Applications page |
-| `js/app.js` | Routing, page layout, progress tracking, and moving each figure's controls into the side panel |
-
-Libraries: [Three.js](https://threejs.org) r170 (MIT), [KaTeX](https://katex.org) 0.16 (MIT), IBM Plex Sans and Fraunces (SIL Open Font License).
-
-## Notes on content
-
-- Explanations are written for this site. Equations, constants and lesson order follow the CHEM 120/121 module notes; the notes' text and figures are not reproduced.
-- Accent colours come from hydrogen's emission lines: H-alpha red (656 nm) and H-beta cyan (486 nm) double as the + and − phase colours of a wavefunction.
-- This is a study companion, not an official University of Waterloo resource.
+This is an independent study aid, not an official University of Waterloo resource.

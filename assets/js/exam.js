@@ -1,0 +1,197 @@
+/* CHEM 120 Interactive: exam engine for mini exams, quiz prep and the practice tests.
+   Items: {kind:"mc", id, lec, q, opts:[[text,correct,why]], multi} or {kind:"gen", gid, seed, diff, lec}.
+   No feedback until submit. Then a breakdown by lecture and a list of what to relearn.
+   cfg: {key, title, intro, items | build(sel)->items, sizes, picker:[{id,label}], timeLimit (min), timed:true} */
+(function(){
+"use strict";
+const M=window.C120, el=M.el, rich=M.rich, esc=M.esc;
+
+function topicLabel(lid){ const L=M.chap(lid); return L?`${L.num} ${L.title.replace(/\$[^$]*\$/g,"")}`:lid; }
+/* marks for one MC answer, 0 to 1. Select-all is graded the way CHEM 120 grades it: correct picks minus incorrect picks, over the number of correct options, never below 0. */
+function creditSets(right,sel){ if(!right.length) return sel.length?0:1; const c=sel.filter(i=>right.includes(i)).length, w=sel.length-c; return Math.max(0,(c-w)/right.length); }
+function creditMC(q,a){ if(!q.multi) return correctMC(q,a)?1:0; const right=q.opts.map((o,i)=>o[1]?i:-1).filter(i=>i>=0); return creditSets(right,Array.isArray(a)?a:[]); }
+const fmtMarks=x=>Number.isInteger(x)?String(x):x.toFixed(2).replace(/0$/,"");
+function correctMC(q,a){ if(a==null) return false; const right=q.opts.map((o,i)=>o[1]?i:-1).filter(i=>i>=0); const sel=Array.isArray(a)?a:[a]; return sel.length===right.length && sel.every(i=>right.includes(i)); }
+function pick(items,n){
+  if(n>=items.length) return M.shuffle(items);
+  const by={}; M.shuffle(items).forEach(q=>{ (by[q.lec]=by[q.lec]||[]).push(q); });
+  const keys=M.shuffle(Object.keys(by)), out=[];
+  while(out.length<n){ let added=false; for(const k of keys){ if(by[k].length && out.length<n){ out.push(by[k].pop()); added=true; } } if(!added) break; }
+  return M.shuffle(out);
+}
+
+
+/* turn a generated problem into a test-style multiple choice question: the right answer plus four tempting wrong ones */
+function genToMC(q){
+  const seed=q.seed!=null?q.seed:M.newSeed(); let made; try{ made=ENGINE.make(q.gid,seed,q.diff||2); }catch(e){ return null; }
+  const p=made.p, part=p.parts[0], a=part.answer, t=a.type||"num";
+  const stem=p.prompt+(p.parts.length>1?` ${part.label?"("+part.label.replace(/<[^>]+>/g,"")+")":""}`:"");
+  if(t==="mc"||t==="multi") return {...q,kind:"mc",seed,q:stem,opts:a.options.map((o,i)=>[o,t==="multi"?a.correct.includes(i):i===a.correct,""]),multi:t==="multi",keep:a.keep,fromGen:true};
+  if(t==="int"){ const v=+a.value; const c=[v,v+1,v-1,v+2,v*2,v-2].filter((x,i,arr)=>x>=0&&arr.indexOf(x)===i).slice(0,5); while(c.length<5) c.push(c[c.length-1]+3); return {...q,kind:"mc",seed,q:stem,opts:c.map(x=>[String(x),x===v,""]),fromGen:true,closest:false}; }
+  if(t!=="num") return null;
+  const v=+a.value, sf=a.sf||3; if(!isFinite(v)||v===0) return null;
+  const fmt=x=>`$${M.numTeX(x,sf)}${a.unit?"\\ "+MC.unitTeX(a.unit):""}$`;
+  const R=M.rng(seed^0x5bd1e995);
+  const tries=R.shuffle([10,0.1,1000,0.001,2,0.5,1.5,0.667,6.022e23,1/6.022e23,1e9,1e-9,3,1/3,4,0.25]);
+  const opts=[v]; const seen=new Set([fmt(v)]);
+  for(const f of tries){ if(opts.length>=5) break; const x=v*f; const k=fmt(x); if(seen.has(k)) continue; seen.add(k); opts.push(x); }
+  if(opts.length<5) return null;
+  return {...q,kind:"mc",seed,q:stem+(/closest/i.test(stem)?"":" Choose the closest answer."),opts:opts.map(x=>[fmt(x),x===v,""]),fromGen:true};
+}
+/* spread n picks over chapters */
+function spread(arr,n){ const by={}; M.shuffle(arr).forEach(q=>(by[q.lec]=by[q.lec]||[]).push(q)); const keys=M.shuffle(Object.keys(by)); const out=[]; while(out.length<n){ let add=false; for(const k of keys){ if(by[k].length&&out.length<n){ out.push(by[k].pop()); add=true; } } if(!add) break; } return out; }
+/* a test's question pool: each chapter's exam questions plus its generators asked as multiple choice */
+function testPool(chs,tag){ const off=x=>tag&&Array.isArray(x.notOn)&&x.notOn.includes(tag); const out=[]; chs.forEach(id=>{ const L=M.chap(id); if(!L) return; (L.exam||[]).filter(q=>!off(q)).forEach(q=>out.push({...q,kind:"mc",lec:id})); (L.gens||[]).filter(g=>!off(g)).forEach(g=>out.push({kind:"genmc",gid:g.id,lec:id,diff:2+(Math.random()<.4?1:0),id:g.id})); }); return out; }
+function selectTest(pool,n){ const mc=pool.filter(q=>q.kind==="mc"), gm=pool.filter(q=>q.kind==="genmc"); const k=Math.min(gm.length,Math.round(n*0.45)); return M.shuffle([...spread(gm,k),...spread(mc,n-k)]); }
+
+function mount(root,cfg){
+  let qs=[], ans=[], flags=[], cur=0, timer=null, endAt=0, timed=!!cfg.timed, study=!!cfg.study, sst=[];
+  root.innerHTML=""; const wrap=el("div",{class:"ex"}); root.append(wrap);
+  const saved=()=>M.db().exam[cfg.key];
+  function pool(){ return typeof cfg.items==="function"?cfg.items():cfg.items; }
+  function start(){
+    stopTimer(); wrap.innerHTML="";
+    const s=saved(); const c=el("div",{class:"card"});
+    const items=pool();
+    c.innerHTML=`<h2>${esc(cfg.title)}</h2>${cfg.intro?`<p>${rich(cfg.intro)}</p>`:""}
+      ${cfg.study?`<p class="muted">Study mode: check each answer as you go, open a hint, or show the answer. You still get a breakdown by chapter at the end.</p>`:`<p class="muted">Like the real thing: no hints or feedback until you submit. You can skip, flag questions to come back to, and change answers. Afterwards you get a breakdown by chapter and a list of what to relearn.</p>`}
+      ${s?`<p><b>Last attempt:</b> ${s.last}% &nbsp; <b>Best:</b> ${s.best}% &nbsp; <span class="muted">(${s.attempts} attempt${s.attempts>1?"s":""})</span></p>`:""}`;
+    if(cfg.picker) c.append(cfg.picker(()=>start()));
+    if(cfg.allowTimer){
+      const lab=el("label",{class:"row",style:"margin:4px 0 10px;font-weight:600"});
+      const cb=el("input",{type:"checkbox"}); cb.checked=timed; cb.onchange=()=>{ timed=cb.checked; };
+      lab.append(cb, document.createTextNode(` Time me (${cfg.timeLimit} minutes, like the real one)`)); c.append(lab);
+    }
+    const row=el("div",{class:"row"});
+    const sizes=(cfg.sizes||[10]).filter(n=>n<items.length);
+    sizes.forEach(n=>row.append(el("button",{class:"btn",type:"button",onclick:()=>begin(items,n)},`${n} questions`)));
+    row.append(el("button",{class:"btn"+(sizes.length?" ghost":""),type:"button",disabled:items.length?null:"disabled",onclick:()=>begin(items,cfg.fixedSize||items.length)},cfg.fixedSize?`Start (${Math.min(cfg.fixedSize,items.length)} questions)`:`All ${items.length} questions`));
+    c.append(row); wrap.append(c);
+    if(s && s.topics) wrap.append(breakdown(s.topics));
+  }
+  function begin(items,n){
+    const chosen = cfg.select? cfg.select(items,n) : pick(items,n);
+    qs=chosen.map(q=>q.kind==="genmc"?genToMC(q):q).filter(Boolean).map(q=>{ if(q.kind==="gen"){ const seed=q.seed!=null?q.seed:M.newSeed(); let made=null; try{ made=ENGINE.make(q.gid,seed,q.diff||2); }catch(e){ console.error(e); } return {...q,seed,made}; } return {...q,order:q.keep?q.opts.map((o,i)=>i):M.shuffle(q.opts.map((o,i)=>i))}; }).filter(q=>q.kind!=="gen"||q.made);
+    ans=qs.map(q=>q.kind==="gen"?q.made.p.parts.map(()=>""):(q.multi?[]:null)); flags=qs.map(()=>false); cur=0; sst=qs.map(()=>({checked:null,first:null,hint:false,shown:false}));
+    if(timed && cfg.timeLimit && !study){ endAt=Date.now()+cfg.timeLimit*60000; timer=setInterval(tick,1000); }
+    show(); root.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  function stopTimer(){ if(timer){ clearInterval(timer); timer=null; } }
+  function tick(){ const t=root.querySelector(".timer"); const left=Math.max(0,endAt-Date.now()); if(t){ const m=Math.floor(left/60000), s=Math.floor(left%60000/1000); t.textContent=`${m}:${String(s).padStart(2,"0")}`; t.classList.toggle("low",left<5*60000); } if(left<=0){ stopTimer(); submit(true); } }
+  const answered=i=>{ const a=ans[i]; if(qs[i].kind==="gen") return a.some(x=>String(x).trim()); return Array.isArray(a)?a.length>0:a!=null; };
+  function show(){
+    wrap.innerHTML=""; const q=qs[cur]; const c=el("div",{class:"card"});
+    const n=qs.filter((_,i)=>answered(i)).length;
+    c.innerHTML=`<div class="row" style="justify-content:space-between"><b>Question ${cur+1} of ${qs.length}</b>${timer?`<span class="timer" aria-live="off">--:--</span>`:""}<span class="muted">${n} answered</span></div><div class="ex-prog"><i style="width:${n/qs.length*100}%"></i></div>`;
+    if(q.kind==="gen"){
+      const p=q.made.p; c.append(el("div",{class:"ex-q",rich:p.prompt}));
+      p.parts.forEach((part,pi)=>{ const a=part.answer, t=a.type||"expr";
+        const box=el("div",{class:"ans"}); if(part.label||p.parts.length>1) box.append(el("label",{rich:part.label||`Part ${pi+1}`}));
+        if(t==="mc"){ a.options.forEach((o,oi)=>{ const b=el("button",{class:"ex-opt"+(ans[cur][pi]===String(oi)?" sel":""),type:"button"},el("span",{class:"l"},"ABCDEF"[oi]),el("span",{rich:o})); b.onclick=()=>{ ans[cur][pi]= ans[cur][pi]===String(oi)?"":String(oi); show(); }; box.append(b); }); }
+        else if(t==="multi"){ box.append(el("p",{class:"muted small"},"Select all that apply.")); const cur0=String(ans[cur][pi]||"").split(",").filter(Boolean); a.options.forEach((o,oi)=>{ const on=cur0.includes(String(oi)); const b=el("button",{class:"ex-opt"+(on?" sel":""),type:"button","aria-pressed":String(on)},el("span",{class:"l"},"ABCDEF"[oi]),el("span",{rich:o})); b.onclick=()=>{ const set=new Set(String(ans[cur][pi]||"").split(",").filter(Boolean)); if(set.has(String(oi))) set.delete(String(oi)); else set.add(String(oi)); ans[cur][pi]=[...set].sort().join(","); show(); }; box.append(b); }); }
+        else if(t==="firstline"){ box.append(el("p",{class:"muted small"},"Click the first line with a mistake.")); a.lines.forEach((ln,li)=>{ const b=el("button",{class:"ex-opt"+(ans[cur][pi]===String(li)?" sel":""),type:"button"},el("span",{class:"l"},String(li+1)),el("span",{rich:ln})); b.onclick=()=>{ ans[cur][pi]=ans[cur][pi]===String(li)?"":String(li); show(); }; box.append(b); }); }
+        else { const inp=el("input",{type:"text",autocomplete:"off",spellcheck:"false",value:ans[cur][pi],"aria-label":"Your answer"}); const pre=el("div",{class:"pre"});
+          const upd=()=>{ ans[cur][pi]=inp.value; const r=MC.preview(inp.value,t); if(r.error){ pre.className="pre err"; pre.textContent=r.error; } else { pre.className="pre"; pre.innerHTML=r.tex?M.tex(r.tex):`<span class="lab">Preview</span>`; } };
+          inp.addEventListener("input",()=>{ upd(); dots(); }); upd(); const row=el("div",{class:"inrow"}); row.append(inp); box.append(row,pre); }
+        c.append(box); });
+    } else {
+      c.append(el("div",{class:"ex-q",rich:q.q}));
+      if(q.multi) c.append(el("p",{class:"muted small"},"Select all that apply."));
+      q.order.forEach((oi,k)=>{ const o=q.opts[oi]; const sel=q.multi?ans[cur].includes(oi):ans[cur]===oi;
+        const S=sst[cur]||{}; const mark=study&&(S.shown||(S.checked&&S.checked.includes(oi)))?(o[1]?" right":(S.checked&&S.checked.includes(oi)?" wrong":"")):"";
+        const b=el("button",{class:"ex-opt"+(sel?" sel":"")+mark,type:"button"},el("span",{class:"l"},"ABCDEF"[k]),el("span",{rich:o[0]}));
+        b.onclick=()=>{ if(q.multi){ const a=ans[cur]; const j=a.indexOf(oi); if(j>=0) a.splice(j,1); else a.push(oi); } else ans[cur]= ans[cur]===oi?null:oi; show(); };
+        c.append(b); });
+      if(study) c.append(studyBox(q,cur));
+    }
+    const fl=el("button",{class:"sbtn",type:"button",onclick:()=>{ flags[cur]=!flags[cur]; show(); }}, flags[cur]?"Flagged":"Flag to come back");
+    const nav=el("div",{class:"row",style:"justify-content:space-between;margin-top:12px"});
+    const left=el("div",{class:"row"}); left.append(el("button",{class:"btn ghost",type:"button",disabled:cur===0?"disabled":null,onclick:()=>{ cur--; show(); }},"Back"), fl);
+    const right=el("div",{class:"row"});
+    if(cur<qs.length-1) right.append(el("button",{class:"btn",type:"button",onclick:()=>{ cur++; show(); }},answered(cur)?"Next":"Skip"));
+    right.append(el("button",{class:cur<qs.length-1?"btn ghost":"btn",type:"button",onclick:()=>submit(false)},"Submit"));
+    nav.append(left,right); c.append(nav);
+    const d=el("div",{class:"ex-dots","aria-label":"Jump to question"}); c.append(d);
+    function dots(){ d.innerHTML=""; qs.forEach((_,i)=>{ const b=el("button",{type:"button",class:(answered(i)?"ans ":"")+(i===cur?"cur ":"")+(flags[i]?"flg":""),"aria-label":`Question ${i+1}`},String(i+1)); b.onclick=()=>{ cur=i; show(); }; d.append(b); }); }
+    dots();
+    wrap.append(c); if(timer) tick();
+  }
+  /* study mode: check as you go, a hint, or the answer */
+  function hintFor(q){
+    if(q.hint) return `<p>${rich(q.hint)}</p>`;
+    const L=M.chap(q.lec); const d=(M.extras.drills||[]).find(x=>x.lec===q.lec);
+    return `${d?`<div class="how">${rich(d.how)}</div>`:""}${L?`<p class="small muted">From chapter ${L.num}, ${esc(L.title.replace(/\$[^$]*\$/g,""))}${q.ref||q.page?` (${esc(q.page||M.refText(q.lec,q.ref))})`:""}.</p>`:""}`;
+  }
+  function studyBox(q,i){
+    const S=sst[i]; const box=el("div",{class:"studybox"});
+    const row=el("div",{class:"row",style:"gap:6px;margin-top:10px"});
+    const chosen=()=>q.multi?ans[i].slice():(ans[i]==null?[]:[ans[i]]);
+    row.append(el("button",{class:"btn sm",type:"button",disabled:answered(i)?null:"disabled",onclick:()=>{ S.checked=chosen(); if(S.first==null&&!S.shown) S.first=creditMC(q,ans[i]); show(); }},"Check my answer"));
+    row.append(el("button",{class:"sbtn",type:"button",onclick:()=>{ S.hint=!S.hint; show(); }},S.hint?"Hide hint":"Hint"));
+    row.append(el("button",{class:"sbtn",type:"button",onclick:()=>{ if(S.first==null) S.first=0; S.shown=true; show(); }},"Show the answer"));
+    box.append(row);
+    if(S.hint) box.append(el("div",{class:"fb hint",html:`<b>Hint.</b> ${hintFor(q)}`}));
+    if(S.checked&&!S.shown){ const c=creditSets(q.opts.map((o,j)=>o[1]?j:-1).filter(j=>j>=0),S.checked);
+      const why=S.checked.map(j=>q.opts[j][2]?`<li>${rich(q.opts[j][0])}: ${rich(q.opts[j][2])}</li>`:"").join("");
+      box.append(el("div",{class:"fb "+(c>=1?"ok":"bad"),html:`<b>${c>=1?"Right.":c>0?`Partly right (${fmtMarks(c)} of 1 mark).`:"Not quite."}</b> ${c>=1?"":"Change your answer and check again, or open the hint."}${why?`<ul>${why}</ul>`:""}`})); }
+    if(S.shown){ const ri=q.opts.map((o,j)=>o[1]?j:-1).filter(j=>j>=0);
+      box.append(el("div",{class:"fb ok",html:`<b>Answer:</b> ${ri.map(j=>rich(q.opts[j][0])).join("; ")||"none of them"}<ul>${q.opts.map(o=>o[2]?`<li>${rich(o[0])}: ${rich(o[2])}</li>`:"").join("")}</ul>`})); }
+    if(S.first!=null) box.append(el("p",{class:"muted small",style:"margin:6px 0 0"},S.shown&&S.first===0?"This one counts as 0 in your score because you looked at the answer first.":`Counted in your score: your first check (${fmtMarks(S.first)} of 1).`));
+    return box;
+  }
+  function grade(i){
+    if(study && sst[i] && sst[i].first!=null) return sst[i].first;
+    const q=qs[i];
+    if(q.kind==="gen"){ const p=q.made.p; const cr=p.parts.map((part,pi)=>{ const a=part.answer, t=a.type||"num"; if(t==="mc") return ans[i][pi]===String(a.correct)?1:0; if(t==="multi") return creditSets(a.correct.map(Number),String(ans[i][pi]||"").split(",").filter(Boolean).map(Number)); if(t==="firstline") return ans[i][pi]===String(a.wrong)?1:0; const r=MC.check(ans[i][pi],a); return r.ok?1:0; }); return cr.reduce((x,y)=>x+y,0)/cr.length; }
+    return creditMC(q,ans[i]);
+  }
+  function submit(auto){
+    const un=qs.filter((_,i)=>!answered(i)).length, fl=flags.filter(Boolean).length;
+    if(!auto && !study && (un||fl) && !confirm(`${un?`${un} unanswered`:""}${un&&fl?" and ":""}${fl?`${fl} flagged`:""}. Submit anyway?`)) return;
+    stopTimer();
+    const topics={}; let right=0; const cred=qs.map((q,i)=>grade(i)); const res=cred.map(x=>x>=1);
+    qs.forEach((q,i)=>{ const ok=res[i]; right+=cred[i]; topics[q.lec]=topics[q.lec]||{right:0,total:0}; topics[q.lec].total++; topics[q.lec].right+=cred[i];
+      if(q.kind==="gen"){ M.recordAttempt(q.gid,ok,true); if(!ok) M.logMistake({gid:q.gid,seed:q.seed,diff:q.diff||2,lec:q.lec,src:cfg.title}); }
+      else if(!ok){ if(q.fromGen) M.logMistake({gid:q.gid,seed:q.seed,diff:q.diff||2,lec:q.lec,src:cfg.title}); else M.logMistake({mc:q.id,lec:q.lec,src:cfg.title}); } });
+    const pct=Math.round(right/qs.length*100);
+    const db=M.db(); const prev=db.exam[cfg.key]||{best:0,attempts:0};
+    db.exam[cfg.key]={last:pct,best:Math.max(prev.best||0,pct),attempts:(prev.attempts||0)+1,topics,when:Date.now(),n:qs.length}; M.save();
+    results(right,pct,topics,prev,res,auto,cred);
+  }
+  function breakdown(topics){
+    const c=el("div",{class:"card"}); c.append(el("h3",{},"By chapter"));
+    Object.keys(topics).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).forEach(k=>{ const t=topics[k], f=t.right/t.total; const col=f>=.8?"#2a7648":f>=.6?"#d9a12b":"#c0482f";
+      c.append(el("div",{class:"acc",html:`<span>${esc(topicLabel(k))}</span><span class="bar"><i style="width:${Math.max(4,f*100)}%;background:${col}"></i></span><span class="n">${fmtMarks(t.right)}/${t.total}</span>`})); });
+    return c;
+  }
+  function results(right,pct,topics,prev,res,auto,cred){
+    wrap.innerHTML=""; const s=saved(); const c=el("div",{class:"card"});
+    const msg=pct>=85?"Strong. You know this material.":pct>=70?"Solid, with a few gaps to close.":pct>=50?"Getting there. Work on the chapters below.":"This needs another pass. Start with the weakest chapter below.";
+    c.innerHTML=`<h2>Results${auto?" (time's up)":""}</h2><div class="ex-score"><div><div class="big">${fmtMarks(right)}/${qs.length}</div><div class="muted">marks (${pct}%)</div></div><div><div class="big" style="color:var(--head)">${s.best}%</div><div class="muted">${prev.attempts?(pct>(prev.best||0)?"new personal best":"your best"):"your first score"}</div></div></div><p>${msg}</p>`;
+    const weak=Object.keys(topics).map(k=>({k,...topics[k],f:topics[k].right/topics[k].total})).filter(t=>t.f<.75).sort((a,b)=>a.f-b.f);
+    if(weak.length){ const box=el("div",{class:"relearn"}); box.append(el("b",{},"Relearn these")); const ul=el("ul",{style:"margin:8px 0 0;padding-left:18px"});
+      weak.forEach(t=>{ const li=el("li",{html:`<b>${esc(topicLabel(t.k))}</b>: ${fmtMarks(t.right)} of ${t.total} marks. `}); li.append(el("a",{href:M.chURL(t.k)},"Open the chapter")); ul.append(li); });
+      box.append(ul); c.append(box); }
+    else c.append(el("p",{style:"font-weight:600;color:var(--ok)"},"Nothing below 75% in any chapter."));
+    const row=el("div",{class:"row",style:"margin-top:8px"});
+    row.append(el("button",{class:"btn",type:"button",onclick:()=>begin(pool(),qs.length)},"Retake with new questions"));
+    const missed=qs.filter((q,i)=>!res[i]);
+    if(missed.length) row.append(el("button",{class:"btn ghost",type:"button",onclick:()=>{ qs=missed.map(q=>q.kind==="gen"?{...q}:{...q,order:M.shuffle(q.opts.map((o,i)=>i))}); ans=qs.map(q=>q.kind==="gen"?q.made.p.parts.map(()=>""):(q.multi?[]:null)); flags=qs.map(()=>false); cur=0; show(); }},`Redo the ${missed.length} I missed`));
+    row.append(el("button",{class:"btn ghost",type:"button",onclick:start},"Back to start"));
+    c.append(row); wrap.append(c, breakdown(topics));
+    const rv=el("div",{class:"card rev"}); rv.append(el("h3",{},"Every question, with the answer"));
+    qs.forEach((q,i)=>{ const ok=res[i], blank=!answered(i), part=!ok&&cred[i]>0; const d=el("details");
+      let body="";
+      if(q.kind==="gen"){ const p=q.made.p; body=`<p><b>Your answer:</b> ${p.parts.map((pt,pi)=>{ const a=ans[i][pi]; if(!a) return "(blank)"; const ty=pt.answer.type||"num"; if(ty==="mc") return rich(pt.answer.options[+a]); if(ty==="multi") return a.split(",").map(k=>rich(pt.answer.options[+k])).join("; "); if(ty==="firstline") return "line "+(+a+1); const pv=MC.preview(a,pt.answer.type); return pv.tex?M.tex(pv.tex):esc(a); }).join("; ")}</p>${p.answerTeX?`<p class="right"><b>Answer:</b> ${rich(p.answerTeX)}</p>`:""}<ol>${(p.steps||[]).map(s=>`<li>${rich(s)}</li>`).join("")}</ol>`;
+        d.innerHTML=`<summary><span class="mk ${blank?"skip":ok?"ok":"no"}">${blank?"–":ok?"✓":part?fmtMarks(cred[i]):"✗"}</span><span>${rich(p.prompt)} <span class="pill">Ch ${M.chap(q.lec).num}</span></span></summary><div class="body">${body}</div>`; }
+      else { const ri=q.opts.map((o,j)=>o[1]?j:-1).filter(j=>j>=0); const yours=q.multi?ans[i]:(ans[i]==null?[]:[ans[i]]);
+        body=`${yours.length&&!ok?`<p style="color:var(--bad)"><b>You chose:</b> ${yours.map(j=>rich(q.opts[j][0])).join("; ")}${q.multi?` (${fmtMarks(cred[i])} of 1 mark: correct picks minus wrong picks)`:""}</p>`:""}<p style="color:var(--ok)"><b>Answer:</b> ${ri.map(j=>rich(q.opts[j][0])).join("; ")}</p><p>${rich(ri.map(j=>q.opts[j][2]).filter(Boolean).join(" "))}</p>${q.ref?`<p class="ref">${esc(M.refText(q.lec,q.ref))}</p>`:""}`;
+        d.innerHTML=`<summary><span class="mk ${blank?"skip":ok?"ok":"no"}">${blank?"–":ok?"✓":part?fmtMarks(cred[i]):"✗"}</span><span>${rich(q.q)} <span class="pill">Ch ${M.chap(q.lec).num}</span></span></summary><div class="body">${body}</div>`; }
+      rv.append(d); });
+    wrap.append(rv); root.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  start();
+  return {restart:start};
+}
+window.EXAM={mount, correctMC, creditMC, creditSets, fmtMarks, spread, testPool, selectTest, genToMC};
+})();
